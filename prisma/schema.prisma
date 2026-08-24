@@ -1,0 +1,800 @@
+// SetMeister — AI-powered worship planning and team scheduling.
+//
+// Conventions:
+//   * Every church-owned row carries `churchId`. All reads go through lib/data/*,
+//     which requires a ChurchContext. Never query a church-scoped model without it.
+//   * Calendar dates use @db.Date and local wall-clock times use "HH:mm" strings,
+//     interpreted in Church.timezone. We deliberately do NOT store service instants
+//     in UTC — recurring 10:00 services must not drift across DST boundaries.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Auth (Auth.js v5 adapter contract) + tenancy
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  passwordHash  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts       Account[]
+  sessions       Session[]
+  memberships    Membership[]
+  teamMember     TeamMember[]
+  createdService Service[]        @relation("ServiceCreatedBy")
+  conversations  AiConversation[]
+  planRuns       AiPlanRun[]
+  uploads        SongAttachment[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Church {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  logoUrl   String?
+  timezone  String   @default("America/New_York")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships     Membership[]
+  worshipProfile  WorshipProfile?
+  songs           Song[]
+  serviceTypes    ServiceType[]
+  services        Service[]
+  specialDates    SpecialDate[]
+  teamMembers     TeamMember[]
+  positions       Position[]
+  songUsages      SongUsage[]
+  conversations   AiConversation[]
+  planRuns        AiPlanRun[]
+  messages        Message[]
+  recommendations Recommendation[]
+  availabilityReq AvailabilityRequest[]
+}
+
+model Membership {
+  id        String           @id @default(cuid())
+  userId    String
+  churchId  String
+  role      Role             @default(MUSICIAN)
+  status    MembershipStatus @default(ACTIVE)
+  createdAt DateTime         @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  church Church @relation(fields: [churchId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, churchId])
+  @@index([churchId])
+}
+
+/// Church-wide worship preferences. Feeds the AI context and the constraint engine.
+model WorshipProfile {
+  id       String @id @default(cuid())
+  churchId String @unique
+
+  styles            MusicalStyle[]
+  songsPerService   Int            @default(4)
+  /// Ordered flow labels, e.g. ["Upbeat","Mid","Hymn","Response"].
+  setStructure      String[]
+  hymnPreference    HymnPreference @default(OCCASIONALLY)
+  hymnCustomNote    String?
+  /// Do not repeat a song within this many weeks.
+  repeatWindowWeeks Int            @default(8)
+  preferredArtists  String[]
+  avoidArtists      String[]
+  avoidSongs        String[]
+  difficulty        Difficulty     @default(MODERATE)
+  vocalRangeNote    String?
+  updatedAt         DateTime       @updatedAt
+
+  church Church @relation(fields: [churchId], references: [id], onDelete: Cascade)
+}
+
+// ---------------------------------------------------------------------------
+// Songs
+// ---------------------------------------------------------------------------
+
+/// Global seeded catalog. Powers Discover and the onboarding song picker.
+/// NOT church-scoped and never contains a church's edits.
+model CatalogSong {
+  id             String         @id @default(cuid())
+  title          String
+  artist         String
+  ccliNumber     String?
+  defaultKey     String?
+  bpm            Int?
+  tempoCategory  TempoCategory?
+  songTypes      SongType[]
+  themes         String[]
+  difficulty     Difficulty     @default(MODERATE)
+  /// Deterministic gradient seed. We do not scrape or hotlink cover art.
+  artworkSeed    String?
+  spotifyUrl     String?
+  appleMusicUrl  String?
+  youtubeUrl     String?
+  /// 0-100, seeded demo signal driving Trending / Hot New Song.
+  popularity     Int            @default(0)
+  releasedOn     DateTime?      @db.Date
+  isPublicDomain Boolean        @default(false)
+  source         String         @default("seed")
+  createdAt      DateTime       @default(now())
+
+  songs           Song[]
+  recommendations Recommendation[]
+
+  @@unique([title, artist])
+  @@index([popularity])
+}
+
+/// A church's own repertoire entry — the "My Songs" record and the source of
+/// truth for AI set generation.
+model Song {
+  id            String  @id @default(cuid())
+  churchId      String
+  catalogSongId String?
+
+  title                  String
+  artist                 String?
+  ccliNumber             String?
+  defaultKey             String?
+  /// The key this church actually plays it in.
+  churchKey              String?
+  alternateKeys          String[]
+  bpm                    Int?
+  tempoCategory          TempoCategory?
+  songTypes              SongType[]
+  themes                 String[]
+  difficulty             Difficulty     @default(MODERATE)
+  leadVocalistPreference String?
+  lyrics                 String?        @db.Text
+  notes                  String?        @db.Text
+  spotifyUrl             String?
+  appleMusicUrl          String?
+  youtubeUrl             String?
+  familiarity            Familiarity    @default(NEW)
+  status                 SongStatus     @default(ACTIVE)
+
+  /// Denormalized for list sorting. Recomputed whenever SongUsage changes.
+  lastPlayedOn DateTime? @db.Date
+  addedAt      DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  church       Church           @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  catalogSong  CatalogSong?     @relation(fields: [catalogSongId], references: [id], onDelete: SetNull)
+  chart        SongChart?
+  attachments  SongAttachment[]
+  usages       SongUsage[]
+  serviceSongs ServiceSong[]
+
+  @@unique([churchId, title, artist])
+  @@index([churchId, status])
+  @@index([churchId, lastPlayedOn])
+  @@index([churchId, familiarity])
+}
+
+/// Structured so transposition can be added later without a migration.
+/// sections: [{ label, type, lines: [{ chords, lyrics }] }]
+model SongChart {
+  id        String      @id @default(cuid())
+  songId    String      @unique
+  format    ChartFormat @default(PLAIN)
+  key       String?
+  capo      Int?
+  sections  Json?
+  bodyText  String?     @db.Text
+  updatedAt DateTime    @updatedAt
+
+  song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
+}
+
+model SongAttachment {
+  id           String         @id @default(cuid())
+  songId       String
+  kind         AttachmentKind @default(PDF)
+  url          String
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  uploadedById String?
+  createdAt    DateTime       @default(now())
+
+  song       Song  @relation(fields: [songId], references: [id], onDelete: Cascade)
+  uploadedBy User? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@index([songId])
+}
+
+/// The history ledger. Repeat protection and rotation health derive from this.
+model SongUsage {
+  id        String   @id @default(cuid())
+  churchId  String
+  songId    String
+  serviceId String?
+  playedOn  DateTime @db.Date
+  key       String?
+  createdAt DateTime @default(now())
+
+  church  Church   @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  song    Song     @relation(fields: [songId], references: [id], onDelete: Cascade)
+  service Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@unique([songId, serviceId])
+  @@index([churchId, playedOn])
+  @@index([songId, playedOn])
+}
+
+// ---------------------------------------------------------------------------
+// Planning
+// ---------------------------------------------------------------------------
+
+model ServiceType {
+  id               String  @id @default(cuid())
+  churchId         String
+  name             String
+  /// 0 = Sunday.
+  dayOfWeek        Int     @default(0)
+  defaultStartTime String  @default("10:00")
+  defaultCallTime  String  @default("08:30")
+  sortOrder        Int     @default(0)
+  active           Boolean @default(true)
+
+  church      Church       @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  services    Service[]
+  teamMembers TeamMember[]
+
+  @@unique([churchId, name])
+}
+
+model Service {
+  id            String        @id @default(cuid())
+  churchId      String
+  serviceTypeId String?
+  date          DateTime      @db.Date
+  startTime     String        @default("10:00")
+  callTime      String?
+  title         String?
+  notes         String?       @db.Text
+  status        ServiceStatus @default(DRAFT)
+  specialDateId String?
+  createdById   String?
+  /// Set when a draft generated by the AI planner is approved and published.
+  publishedAt   DateTime?
+  aiPlanRunId   String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  church      Church       @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  serviceType ServiceType? @relation(fields: [serviceTypeId], references: [id], onDelete: SetNull)
+  specialDate SpecialDate? @relation(fields: [specialDateId], references: [id], onDelete: SetNull)
+  createdBy   User?        @relation("ServiceCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  aiPlanRun   AiPlanRun?   @relation(fields: [aiPlanRunId], references: [id], onDelete: SetNull)
+
+  sermon      Sermon?
+  songs       ServiceSong[]
+  assignments Assignment[]
+  usages      SongUsage[]
+  messages    Message[]
+
+  @@index([churchId, date])
+  @@index([churchId, status])
+}
+
+model Sermon {
+  id             String   @id @default(cuid())
+  serviceId      String   @unique
+  title          String?
+  scripture      String?
+  series         String?
+  description    String?  @db.Text
+  /// Pasted sermon notes / manuscript excerpt.
+  notes          String?  @db.Text
+  /// Themes the AI inferred, cached so repeat generations stay consistent.
+  inferredThemes String[]
+  updatedAt      DateTime @updatedAt
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+}
+
+model ServiceSong {
+  id        String  @id @default(cuid())
+  serviceId String
+  songId    String
+  position  Int
+  key       String?
+  notes     String? @db.Text
+  addedByAi Boolean @default(false)
+  /// The AI's stated reason, surfaced in "Explain Choices".
+  aiReason  String? @db.Text
+
+  service Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  song    Song    @relation(fields: [songId], references: [id], onDelete: Cascade)
+
+  @@unique([serviceId, position])
+  @@unique([serviceId, songId])
+  @@index([songId])
+}
+
+/// Church-created events only. Movable liturgical feasts (Easter, Advent,
+/// Pentecost...) are computed in lib/domain/liturgical.ts for any year.
+model SpecialDate {
+  id        String          @id @default(cuid())
+  churchId  String
+  date      DateTime        @db.Date
+  name      String
+  kind      SpecialDateKind @default(CHURCH_EVENT)
+  notes     String?
+  createdAt DateTime        @default(now())
+
+  church   Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  services Service[]
+
+  @@unique([churchId, date, name])
+  @@index([churchId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Team
+// ---------------------------------------------------------------------------
+
+/// userId is intentionally nullable: a musician can be scheduled and invited
+/// without ever creating an account.
+model TeamMember {
+  id                     String   @id @default(cuid())
+  churchId               String
+  userId                 String?
+  name                   String
+  email                  String?
+  phone                  String?
+  avatarUrl              String?
+  vocalRange             String?
+  /// Desired serving cadence, used by the rotation fairness scorer.
+  preferredPerMonth      Int      @default(2)
+  preferredServiceTypeId String?
+  notes                  String?  @db.Text
+  active                 Boolean  @default(true)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  church               Church                 @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  user                 User?                  @relation(fields: [userId], references: [id], onDelete: SetNull)
+  preferredServiceType ServiceType?           @relation(fields: [preferredServiceTypeId], references: [id], onDelete: SetNull)
+  positions            TeamMemberPosition[]
+  assignments          Assignment[]
+  blockouts            BlockoutDate[]
+  availability         AvailabilityResponse[]
+  messages             Message[]
+
+  @@index([churchId, active])
+  @@index([userId])
+}
+
+model Position {
+  id        String           @id @default(cuid())
+  churchId  String
+  name      String
+  category  PositionCategory @default(WORSHIP)
+  sortOrder Int              @default(0)
+  active    Boolean          @default(true)
+
+  church      Church               @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  members     TeamMemberPosition[]
+  assignments Assignment[]
+
+  @@unique([churchId, name])
+  @@index([churchId, category])
+}
+
+model TeamMemberPosition {
+  id           String @id @default(cuid())
+  teamMemberId String
+  positionId   String
+  /// Higher wins when the scheduler must choose between capable people.
+  priority     Int    @default(0)
+
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  position   Position   @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@unique([teamMemberId, positionId])
+}
+
+model Assignment {
+  id           String           @id @default(cuid())
+  serviceId    String
+  teamMemberId String
+  positionId   String
+  status       AssignmentStatus @default(PENDING)
+  callTime     String?
+  notes        String?
+  respondedAt  DateTime?
+  createdByAi  Boolean          @default(false)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  service    Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  teamMember TeamMember  @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+  position   Position    @relation(fields: [positionId], references: [id], onDelete: Cascade)
+  invitation Invitation?
+
+  @@unique([serviceId, teamMemberId, positionId])
+  @@index([serviceId])
+  @@index([teamMemberId, status])
+}
+
+/// Public accept/decline links. Only the token HASH is stored; the raw token
+/// exists solely inside the email.
+model Invitation {
+  id                String            @id @default(cuid())
+  assignmentId      String            @unique
+  tokenHash         String            @unique
+  expiresAt         DateTime
+  sentAt            DateTime?
+  respondedAt       DateTime?
+  channel           InvitationChannel @default(EMAIL)
+  providerMessageId String?
+  createdAt         DateTime          @default(now())
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+}
+
+model BlockoutDate {
+  id           String   @id @default(cuid())
+  teamMemberId String
+  startDate    DateTime @db.Date
+  endDate      DateTime @db.Date
+  note         String?
+  createdAt    DateTime @default(now())
+
+  teamMember TeamMember @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  @@index([teamMemberId, startDate, endDate])
+}
+
+model AvailabilityRequest {
+  id          String    @id @default(cuid())
+  churchId    String
+  title       String
+  periodStart DateTime  @db.Date
+  periodEnd   DateTime  @db.Date
+  sentAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  church    Church                 @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  responses AvailabilityResponse[]
+
+  @@index([churchId])
+}
+
+model AvailabilityResponse {
+  id           String             @id @default(cuid())
+  requestId    String
+  teamMemberId String
+  date         DateTime           @db.Date
+  status       AvailabilityStatus @default(AVAILABLE)
+  note         String?
+  respondedAt  DateTime           @default(now())
+
+  request    AvailabilityRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  teamMember TeamMember          @relation(fields: [teamMemberId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, teamMemberId, date])
+  @@index([teamMemberId, date])
+}
+
+// ---------------------------------------------------------------------------
+// Ask SetMeister, messaging, recommendations
+// ---------------------------------------------------------------------------
+
+model AiConversation {
+  id          String        @id @default(cuid())
+  churchId    String
+  userId      String
+  title       String?
+  contextType AiContextType @default(GLOBAL)
+  /// Id of the Service / Song the chat was opened from, when contextual.
+  contextId   String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  church   Church      @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AiMessage[]
+
+  @@index([churchId, userId])
+}
+
+model AiMessage {
+  id             String   @id @default(cuid())
+  conversationId String
+  role           String
+  content        String   @db.Text
+  model          String?
+  tokensIn       Int?
+  tokensOut      Int?
+  createdAt      DateTime @default(now())
+
+  conversation AiConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId, createdAt])
+}
+
+/// Audit trail for "AI proposes, leader approves". Every generated draft traces
+/// back to the request, the raw response, and the constraints it could not meet.
+model AiPlanRun {
+  id           String       @id @default(cuid())
+  churchId     String
+  userId       String
+  kind         AiPlanKind
+  status       AiPlanStatus @default(PENDING)
+  prompt       String?      @db.Text
+  requestJson  Json?
+  responseJson Json?
+  /// Constraints the engine could not satisfy, surfaced verbatim to the user.
+  warnings     Json?
+  model        String?
+  createdAt    DateTime     @default(now())
+
+  church   Church    @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  services Service[]
+
+  @@index([churchId, createdAt])
+}
+
+model Message {
+  id                String        @id @default(cuid())
+  churchId          String
+  kind              MessageKind
+  status            MessageStatus @default(QUEUED)
+  subject           String
+  toEmail           String
+  teamMemberId      String?
+  serviceId         String?
+  providerMessageId String?
+  error             String?
+  sentAt            DateTime?
+  createdAt         DateTime      @default(now())
+
+  church     Church      @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  teamMember TeamMember? @relation(fields: [teamMemberId], references: [id], onDelete: SetNull)
+  service    Service?    @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+
+  @@index([churchId, createdAt])
+  @@index([churchId, kind, status])
+}
+
+model Recommendation {
+  id            String             @id @default(cuid())
+  churchId      String
+  catalogSongId String
+  kind          RecommendationKind @default(FOR_YOU)
+  /// 0-100 "match for your church".
+  score         Int                @default(0)
+  reasons       Json?
+  generatedAt   DateTime           @default(now())
+
+  church      Church      @relation(fields: [churchId], references: [id], onDelete: Cascade)
+  catalogSong CatalogSong @relation(fields: [catalogSongId], references: [id], onDelete: Cascade)
+
+  @@unique([churchId, catalogSongId, kind])
+  @@index([churchId, kind, score])
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum Role {
+  OWNER
+  ADMIN
+  WORSHIP_LEADER
+  TEAM_LEADER
+  MUSICIAN
+  TECH
+  PASTOR
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INVITED
+  INACTIVE
+}
+
+enum MusicalStyle {
+  CONTEMPORARY
+  ROCK
+  COUNTRY
+  GOSPEL
+  TRADITIONAL
+  ACOUSTIC
+  MODERN_HYMNS
+}
+
+enum HymnPreference {
+  NONE
+  ONE_PER_WEEK
+  OCCASIONALLY
+  CUSTOM
+}
+
+enum Difficulty {
+  SIMPLE
+  MODERATE
+  ADVANCED
+}
+
+enum TempoCategory {
+  FAST
+  MEDIUM
+  SLOW
+}
+
+enum SongType {
+  UPBEAT
+  MID_TEMPO
+  REFLECTIVE
+  HYMN
+  COMMUNION
+  EASTER
+  CHRISTMAS
+  ADVENT
+  RESPONSE
+  BAPTISM
+  PRAYER
+  OFFERING
+}
+
+enum Familiarity {
+  NEW
+  LEARNING
+  FAMILIAR
+  CORE
+  RETIRED
+}
+
+enum SongStatus {
+  ACTIVE
+  RETIRED
+}
+
+enum ChartFormat {
+  PLAIN
+  STRUCTURED
+}
+
+enum AttachmentKind {
+  PDF
+  IMAGE
+  AUDIO
+}
+
+enum ServiceStatus {
+  DRAFT
+  READY
+  INVITATIONS_SENT
+  CONFIRMED
+  COMPLETED
+}
+
+enum SpecialDateKind {
+  LITURGICAL
+  CHURCH_EVENT
+  CUSTOM
+}
+
+enum PositionCategory {
+  WORSHIP
+  TECH
+  OTHER
+}
+
+enum AssignmentStatus {
+  PENDING
+  INVITED
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum InvitationChannel {
+  EMAIL
+  SMS
+}
+
+enum AvailabilityStatus {
+  AVAILABLE
+  UNAVAILABLE
+  MAYBE
+}
+
+enum AiContextType {
+  GLOBAL
+  SERVICE
+  SONG
+  SCHEDULE
+}
+
+enum AiPlanKind {
+  SET
+  MULTI_WEEK
+  TEAM
+}
+
+enum AiPlanStatus {
+  PENDING
+  SUCCEEDED
+  PARTIAL
+  FAILED
+}
+
+enum MessageKind {
+  INVITATION
+  ACCEPTANCE
+  DECLINE
+  AVAILABILITY_REQUEST
+  SCHEDULE_UPDATED
+  SET_UPDATED
+}
+
+enum MessageStatus {
+  QUEUED
+  SENT
+  FAILED
+}
+
+enum RecommendationKind {
+  HOT_NEW
+  SIMILAR
+  FOR_YOU
+}
