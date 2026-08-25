@@ -20,7 +20,7 @@ before it begins. Do not start building M5 unprompted.
 |---|---|
 | Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
 | Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
-| Tests | **143 passing**, 11 files. `npm run verify` green (lint + typecheck + test + build) |
+| Tests | **170 passing**, 12 files. `npm run verify` green (lint + typecheck + test + build) |
 | Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
 | Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
 
@@ -77,8 +77,8 @@ recommendations and a Hot New Song card · read-only Plan, Team, Messages, Setti
 
 ## Deliberately NOT implemented yet
 - **Ask SetMeister** is a placeholder page that says so. No AI calls are wired up.
-- **Service create/edit exists** (Block 1). **No set builder and no assignment UI yet** —
-  the Setlist and Team sections on `/plan/[serviceId]` are deliberate placeholders.
+- **Service create/edit and the setlist builder exist** (Blocks 1–2). **No assignment
+  UI yet** — the Team section on `/plan/[serviceId]` is still a deliberate placeholder.
 - **Team pages are read-only.** No scheduling, invitations or emails — that is M6.
 - **Onboarding screens** do not exist; the seed stands in for them.
 - **CCLI** has a field and an adapter seam, no data and no integration.
@@ -743,3 +743,29 @@ without them.
 
 The original copy at `~/Desktop/Websites/SetMeister` was left in place for the user
 to delete.
+
+
+---
+
+## 19. Block 2 — setlist builder
+
+Add, remove, reorder (Up/Down), and re-key songs on `/plan/[serviceId]`, plus a
+searchable picker over the church's active library.
+
+**Two schema facts drove the design**
+- `@@unique([serviceId, songId])` — the schema already forbids a song appearing
+  twice in one service, so duplicates are prevented rather than allowed. A
+  `DuplicateSongError` maps to an inline message, and the picker hides songs
+  already in the set.
+- `@@unique([serviceId, position])` — checked per statement, so reordering cannot
+  simply swap two rows. `renumber()` parks every row in a negative slot inside a
+  transaction, then writes final 1..n positions. Removal renumbers the same way,
+  so positions never develop holes.
+
+**Tenancy.** `ServiceSong` has no `churchId`; every query reaches the tenant
+through `service: scope(ctx)`, the pattern `SongAttachment` already used. Adding a
+song re-checks that *both* the service and the song belong to the caller.
+
+**Tests** — 25 in `tests/setlist.test.ts` plus 2 new tenancy assertions. The scoping
+guard was verified non-vacuous by temporarily unscoping `setServiceSongKey`, which
+made it fail as intended.

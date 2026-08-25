@@ -4,6 +4,7 @@ import { CalendarDays, ListMusic, Pencil, Users } from "lucide-react";
 
 import { PageHeader } from "@/components/app/shell";
 import { DeleteServiceButton } from "@/components/services/service-actions";
+import { SetlistBuilder } from "@/components/services/setlist-builder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,7 @@ import { can } from "@/lib/auth/roles";
 import { requireChurchContext } from "@/lib/auth/session";
 import { NotFoundError } from "@/lib/data/context";
 import { getServiceById } from "@/lib/data/services";
+import { getSetlist, listAddableSongs } from "@/lib/data/setlist";
 import { formatServiceDate, formatTime, titleCase } from "@/lib/format";
 
 type Service = Awaited<ReturnType<typeof getServiceById>>;
@@ -88,6 +90,12 @@ export default async function ServiceDetailPage({
   });
 
   const editable = can(ctx.role, "services:manage");
+  const canEditSetlist = can(ctx.role, "songs:manage");
+
+  const [setlist, addable] = await Promise.all([
+    getSetlist(ctx, serviceId),
+    canEditSetlist ? listAddableSongs(ctx, serviceId) : Promise.resolve([]),
+  ]);
   const heading =
     service.title ?? service.sermon?.title ?? formatServiceDate(service.date);
 
@@ -129,13 +137,33 @@ export default async function ServiceDetailPage({
 
       <div className="grid gap-5 lg:grid-cols-5">
         <div className="lg:col-span-3 grid gap-5">
-          <PlaceholderSection
-            icon={<ListMusic aria-hidden className="size-4 text-ink-subtle" />}
-            title="Setlist"
-            description="Building the setlist is the next piece of work."
-            count={service.songs.length}
-            noun="song"
-          />
+          <Card>
+            <CardHeader className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <ListMusic aria-hidden className="size-4 text-ink-subtle" />
+                <CardTitle>Setlist</CardTitle>
+              </div>
+              {setlist.length > 0 ? (
+                <span className="text-xs text-ink-subtle">
+                  {setlist.length} song{setlist.length === 1 ? "" : "s"}
+                </span>
+              ) : null}
+            </CardHeader>
+            <CardBody>
+              <SetlistBuilder
+                serviceId={service.id}
+                canEdit={canEditSetlist}
+                rows={setlist}
+                addable={addable.map((s) => ({
+                  ...s,
+                  // Dates cannot cross the server/client boundary as Date objects.
+                  lastPlayedOn: s.lastPlayedOn
+                    ? s.lastPlayedOn.toISOString()
+                    : null,
+                }))}
+              />
+            </CardBody>
+          </Card>
 
           <PlaceholderSection
             icon={<Users aria-hidden className="size-4 text-ink-subtle" />}

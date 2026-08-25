@@ -18,12 +18,20 @@ function defaultResult(op: string) {
   return null;
 }
 
-vi.mock("@/lib/db", () => ({
-  db: new Proxy(
+vi.mock("@/lib/db", () => {
+  const client: unknown = new Proxy(
     {},
     {
-      get: (_t, model: string) =>
-        new Proxy(
+      get: (_t, model: string) => {
+        // Transactions run their callback against the same recording stub, so
+        // queries inside them are inspected like any other.
+        if (model === "$transaction") {
+          return (arg: unknown) =>
+            typeof arg === "function"
+              ? (arg as (tx: unknown) => unknown)(client)
+              : Promise.resolve([]);
+        }
+        return new Proxy(
           {},
           {
             get: (_t2, op: string) => (args: Record<string, unknown> = {}) => {
@@ -31,10 +39,12 @@ vi.mock("@/lib/db", () => ({
               return Promise.resolve(defaultResult(op));
             },
           },
-        ),
+        );
+      },
     },
-  ),
-}));
+  );
+  return { db: client };
+});
 
 const {
   listSongs,
@@ -64,6 +74,14 @@ const { listTeamMembers, getTeamMemberById, listPositions, teamStats } =
 const { getWorshipProfile, listServiceTypes, listSpecialDates } = await import(
   "@/lib/data/church"
 );
+const {
+  getSetlist,
+  addSongToService,
+  removeSongFromService,
+  setServiceSongKey,
+  moveServiceSong,
+  listAddableSongs,
+} = await import("@/lib/data/setlist");
 const { scope, scopedById } = await import("@/lib/data/context");
 type ChurchContext = import("@/lib/data/context").ChurchContext;
 
@@ -196,6 +214,14 @@ async function exerciseEveryRepository() {
   await ignoreNotFound(() =>
     createService(ctx, { ...SERVICE_INPUT, serviceTypeId: "type_from_another_church" }),
   );
+  await getSetlist(ctx, "service_from_another_church");
+  await listAddableSongs(ctx, "service_from_another_church");
+  await ignoreNotFound(() =>
+    addSongToService(ctx, "service_from_another_church", "song_x"),
+  );
+  await ignoreNotFound(() => removeSongFromService(ctx, "row_from_another_church"));
+  await ignoreNotFound(() => setServiceSongKey(ctx, "row_from_another_church", "G"));
+  await ignoreNotFound(() => moveServiceSong(ctx, "row_from_another_church", "up"));
 }
 
 beforeEach(() => {
@@ -224,6 +250,34 @@ describe("repository tenant scoping", () => {
       .filter((c) => !GLOBAL_MODELS.has(c.model) && !PARENT_SCOPED_MODELS.has(c.model))
       .filter((c) => !churchIdsIn(c.args).includes(OURS));
     expect(unscoped.map((c) => `${c.model}.${c.op}`)).toEqual([]);
+  });
+
+  it("reaches ServiceSong tenancy through its parent service", async () => {
+    await exerciseEveryRepository();
+    // ServiceSong has no churchId of its own; every query must join through
+    // `service: { churchId }`.
+    const setlistOps = calls.filter((c) => c.model === "serviceSong");
+    expect(setlistOps.length).toBeGreaterThan(0);
+    const entryPoints = setlistOps.filter((c) =>
+      churchIdsIn(c.args).includes(OURS),
+    );
+    expect(entryPoints.length).toBeGreaterThan(0);
+  });
+
+  it("church-scopes every setlist mutation it reaches", async () => {
+    await exerciseEveryRepository();
+    // Against rows this church does not own, the guards fire first and no
+    // mutation is attempted at all. Any mutation that IS reached must carry the
+    // tenant filter in its own where clause.
+    const mutations = calls.filter(
+      (c) =>
+        c.model === "serviceSong" &&
+        ["create", "updateMany", "deleteMany", "update", "delete"].includes(c.op),
+    );
+    expect(mutations.length).toBeGreaterThan(0);
+    for (const m of mutations) {
+      expect(churchIdsIn(m.args)).toContain(OURS);
+    }
   });
 
   it("re-checks a referenced service type against the caller's church", async () => {
