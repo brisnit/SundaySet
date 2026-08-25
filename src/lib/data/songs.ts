@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { Familiarity, SongStatus, SongType } from "@/generated/prisma/enums";
+import type { ChartInput, SongInput } from "@/lib/validation/song";
 import { db } from "@/lib/db";
 import { classifyUsage, type UsageVerdict } from "@/lib/domain/song-usage";
 
@@ -173,4 +174,162 @@ export async function songLibraryStats(ctx: ChurchContext) {
     db.song.count({ where: { ...scope(ctx), chart: { isNot: null } } }),
   ]);
   return { total, active, hymns, charts, missingCharts: active - charts };
+}
+
+// ---------------------------------------------------------------------------
+// Writes
+//
+// These use updateMany / deleteMany with a scoped `where` rather than
+// update / delete, which demand a unique selector and would therefore key on a
+// bare id. A scoped bulk operation simply affects zero rows when the record
+// belongs to another church, so a wrong id can never mutate someone else's data.
+// ---------------------------------------------------------------------------
+
+export async function createSong(ctx: ChurchContext, input: SongInput) {
+  return db.song.create({
+    data: {
+      ...input,
+      churchId: ctx.churchId,
+      churchKey: input.churchKey ?? input.defaultKey,
+    },
+  });
+}
+
+export async function updateSong(
+  ctx: ChurchContext,
+  id: string,
+  input: SongInput,
+) {
+  const { count } = await db.song.updateMany({
+    where: scopedById(ctx, id),
+    data: input,
+  });
+  if (count === 0) throw new NotFoundError("Song");
+}
+
+export async function setSongStatus(
+  ctx: ChurchContext,
+  id: string,
+  status: SongStatus,
+) {
+  const { count } = await db.song.updateMany({
+    where: scopedById(ctx, id),
+    data: { status, ...(status === "RETIRED" ? { familiarity: "RETIRED" } : {}) },
+  });
+  if (count === 0) throw new NotFoundError("Song");
+}
+
+export async function deleteSong(ctx: ChurchContext, id: string) {
+  const { count } = await db.song.deleteMany({ where: scopedById(ctx, id) });
+  if (count === 0) throw new NotFoundError("Song");
+}
+
+/**
+ * Add a Discover catalog song to this church's library.
+ * Returns the existing row when it is already there, so the button is idempotent.
+ */
+export async function addSongFromCatalog(
+  ctx: ChurchContext,
+  catalogSongId: string,
+) {
+  const catalog = await db.catalogSong.findUnique({ where: { id: catalogSongId } });
+  if (!catalog) throw new NotFoundError("Catalog song");
+
+  const existing = await db.song.findFirst({
+    where: { ...scope(ctx), title: catalog.title, artist: catalog.artist },
+  });
+  if (existing) return existing;
+
+  return db.song.create({
+    data: {
+      churchId: ctx.churchId,
+      catalogSongId: catalog.id,
+      title: catalog.title,
+      artist: catalog.artist,
+      ccliNumber: catalog.ccliNumber,
+      defaultKey: catalog.defaultKey,
+      churchKey: catalog.defaultKey,
+      bpm: catalog.bpm,
+      tempoCategory: catalog.tempoCategory,
+      songTypes: catalog.songTypes,
+      themes: catalog.themes,
+      difficulty: catalog.difficulty,
+      spotifyUrl: catalog.spotifyUrl,
+      appleMusicUrl: catalog.appleMusicUrl,
+      youtubeUrl: catalog.youtubeUrl,
+      familiarity: "NEW",
+      status: "ACTIVE",
+    },
+  });
+}
+
+export async function upsertSongChart(
+  ctx: ChurchContext,
+  songId: string,
+  input: ChartInput,
+) {
+  // Ownership is proven before touching the chart, which is keyed by songId.
+  const song = await db.song.findFirst({
+    where: scopedById(ctx, songId),
+    select: { id: true },
+  });
+  if (!song) throw new NotFoundError("Song");
+
+  const data = {
+    format: "STRUCTURED" as const,
+    key: input.key,
+    capo: input.capo,
+    sections: input.sections,
+  };
+  return db.songChart.upsert({
+    where: { songId },
+    create: { songId, ...data },
+    update: data,
+  });
+}
+
+/** Full play history for the song detail page. */
+export async function getSongUsageHistory(ctx: ChurchContext, songId: string) {
+  return db.songUsage.findMany({
+    where: { ...scope(ctx), songId },
+    include: { service: { select: { id: true, date: true } } },
+    orderBy: { playedOn: "desc" },
+    take: 60,
+  });
+}
+
+export async function addSongAttachment(
+  ctx: ChurchContext,
+  songId: string,
+  file: { url: string; filename: string; mimeType: string; sizeBytes: number },
+) {
+  const song = await db.song.findFirst({
+    where: scopedById(ctx, songId),
+    select: { id: true },
+  });
+  if (!song) throw new NotFoundError("Song");
+
+  return db.songAttachment.create({
+    data: {
+      songId,
+      kind: "PDF",
+      url: file.url,
+      filename: file.filename,
+      mimeType: file.mimeType,
+      sizeBytes: file.sizeBytes,
+      uploadedById: ctx.userId,
+    },
+  });
+}
+
+/** Returns the stored URL so the caller can remove the blob too. */
+export async function deleteSongAttachment(ctx: ChurchContext, id: string) {
+  const attachment = await db.songAttachment.findFirst({
+    where: { id, song: scope(ctx) },
+    select: { id: true, url: true },
+  });
+  if (!attachment) throw new NotFoundError("Attachment");
+
+  await db.songAttachment.delete({ where: { id: attachment.id } });
+  return attachment.url;
 }

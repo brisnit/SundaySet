@@ -5,8 +5,11 @@ import { PageHeader } from "@/components/app/shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { SongFilters } from "@/components/songs/song-filters";
 import { requireChurchContext } from "@/lib/auth/session";
 import { listSongs, songLibraryStats } from "@/lib/data/songs";
+import type { Familiarity, SongStatus, SongType } from "@/generated/prisma/enums";
+import type { SongSort } from "@/lib/data/songs";
 import { describeLastPlayed, type UsageStatus } from "@/lib/domain/song-usage";
 import { titleCase } from "@/lib/format";
 
@@ -21,14 +24,34 @@ const USAGE_TONE: Record<UsageStatus, "sage" | "amber" | "clay" | "slate" | "neu
   READY_TO_RETURN: "slate",
 };
 
-export default async function SongsPage() {
+const one = (v: string | string[] | undefined) =>
+  (Array.isArray(v) ? v[0] : v) || undefined;
+
+export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
   const ctx = await requireChurchContext();
-  const [songs, stats] = await Promise.all([
+  const params = await searchParams;
+
+  const type = one(params.type) as SongType | undefined;
+  const familiarity = one(params.familiarity) as Familiarity | undefined;
+  const status = one(params.status) as SongStatus | undefined;
+  const chart = one(params.chart);
+
+  const [filtered, all, stats] = await Promise.all([
+    listSongs(ctx, {
+      search: one(params.q),
+      songTypes: type ? [type] : undefined,
+      familiarity: familiarity ? [familiarity] : undefined,
+      status,
+      sort: (one(params.sort) as SongSort | undefined) ?? "title",
+    }),
     listSongs(ctx, { sort: "title" }),
     songLibraryStats(ctx),
   ]);
 
-  if (songs.length === 0) {
+  // Deep-linked from the dashboard's "charts are missing" alert.
+  const songs = chart === "missing" ? filtered.filter((s) => !s.hasChart) : filtered;
+
+  if (all.length === 0) {
     return (
       <>
         <PageHeader title="Songs" />
@@ -70,6 +93,14 @@ export default async function SongsPage() {
         }
       />
 
+      <SongFilters total={all.length} shown={songs.length} />
+
+      {songs.length === 0 ? (
+        <EmptyState
+          title="No songs match those filters"
+          description="Try a different search term, or clear the filters to see your whole library."
+        />
+      ) : (
       <div className="overflow-hidden rounded-xl border border-line bg-surface">
         <table className="w-full text-sm">
           <caption className="sr-only">
@@ -118,6 +149,7 @@ export default async function SongsPage() {
           </tbody>
         </table>
       </div>
+      )}
     </>
   );
 }

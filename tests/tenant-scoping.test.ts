@@ -36,9 +36,18 @@ vi.mock("@/lib/db", () => ({
   ),
 }));
 
-const { listSongs, getSongById, songLibraryStats } = await import(
-  "@/lib/data/songs"
-);
+const {
+  listSongs,
+  getSongById,
+  songLibraryStats,
+  createSong,
+  updateSong,
+  setSongStatus,
+  deleteSong,
+  upsertSongChart,
+  addSongFromCatalog,
+  getSongUsageHistory,
+} = await import("@/lib/data/songs");
 const {
   listServices,
   getNextService,
@@ -96,6 +105,45 @@ async function ignoreNotFound(fn: () => Promise<unknown>) {
   }
 }
 
+/**
+ * Models that legitimately carry no churchId.
+ *
+ * `catalogSong` is the global Discover catalogue, shared by every church and
+ * never holding church data. `songChart` and `songUsage` hang off a Song, so
+ * they are scoped by proving ownership of the parent first — asserted
+ * separately below rather than waived.
+ */
+const GLOBAL_MODELS = new Set(["catalogSong"]);
+const PARENT_SCOPED_MODELS = new Set(["songChart"]);
+
+const SONG_INPUT: Parameters<typeof createSong>[1] = {
+  title: "New Song",
+  artist: undefined,
+  ccliNumber: undefined,
+  defaultKey: undefined,
+  churchKey: undefined,
+  alternateKeys: [],
+  bpm: undefined,
+  tempoCategory: undefined,
+  songTypes: [],
+  themes: [],
+  difficulty: "MODERATE",
+  familiarity: "NEW",
+  status: "ACTIVE",
+  leadVocalistPreference: undefined,
+  lyrics: undefined,
+  notes: undefined,
+  spotifyUrl: undefined,
+  appleMusicUrl: undefined,
+  youtubeUrl: undefined,
+};
+
+const CHART_INPUT: Parameters<typeof upsertSongChart>[2] = {
+  key: undefined,
+  capo: undefined,
+  sections: [],
+};
+
 async function exerciseEveryRepository() {
   await listSongs(ctx);
   await songLibraryStats(ctx);
@@ -115,6 +163,13 @@ async function exerciseEveryRepository() {
   await ignoreNotFound(() =>
     getTeamMemberById(ctx, "member_from_another_church"),
   );
+  await getSongUsageHistory(ctx, "song_from_another_church");
+  await createSong(ctx, SONG_INPUT);
+  await ignoreNotFound(() => updateSong(ctx, "song_from_another_church", SONG_INPUT));
+  await ignoreNotFound(() => setSongStatus(ctx, "song_from_another_church", "RETIRED"));
+  await ignoreNotFound(() => deleteSong(ctx, "song_from_another_church"));
+  await ignoreNotFound(() => upsertSongChart(ctx, "song_from_another_church", CHART_INPUT));
+  await ignoreNotFound(() => addSongFromCatalog(ctx, "catalog_song"));
 }
 
 beforeEach(() => {
@@ -137,14 +192,37 @@ describe("repository tenant scoping", () => {
     expect(calls.length).toBeGreaterThan(15);
   });
 
-  it("carries the caller's churchId on every single query", async () => {
+  it("carries the caller's churchId on every church-owned query", async () => {
     await exerciseEveryRepository();
-    const unscoped = calls.filter(
-      (c) => !churchIdsIn(c.args).includes(OURS),
+    const unscoped = calls
+      .filter((c) => !GLOBAL_MODELS.has(c.model) && !PARENT_SCOPED_MODELS.has(c.model))
+      .filter((c) => !churchIdsIn(c.args).includes(OURS));
+    expect(unscoped.map((c) => `${c.model}.${c.op}`)).toEqual([]);
+  });
+
+  it("checks ownership of the parent song before touching its chart", async () => {
+    await exerciseEveryRepository();
+    // SongChart has no churchId of its own, so upsertSongChart first resolves
+    // the song through a scoped findFirst. Against a song this church does not
+    // own that lookup misses, and the chart must never be written at all.
+    const ownershipCheck = calls.some(
+      (c) =>
+        c.model === "song" &&
+        c.op === "findFirst" &&
+        churchIdsIn(c.args).includes(OURS),
     );
-    expect(
-      unscoped.map((c) => `${c.model}.${c.op}`),
-    ).toEqual([]);
+    expect(ownershipCheck).toBe(true);
+    expect(calls.filter((c) => PARENT_SCOPED_MODELS.has(c.model))).toEqual([]);
+  });
+
+  it("never mutates a record with a bare-id update or delete", async () => {
+    await exerciseEveryRepository();
+    // update()/delete() require a unique selector, which would be the id alone.
+    // Writes must go through updateMany/deleteMany with a scoped where.
+    const bare = calls.filter(
+      (c) => (c.op === "update" || c.op === "delete") && c.model !== "songChart",
+    );
+    expect(bare.map((c) => `${c.model}.${c.op}`)).toEqual([]);
   });
 
   it("never leaks another church's id into a query", async () => {
@@ -155,9 +233,9 @@ describe("repository tenant scoping", () => {
 
   it("resolves records by id only in combination with the church", async () => {
     await exerciseEveryRepository();
-    const byId = calls.filter(
-      (c) => c.op === "findFirst" || c.op === "findUnique",
-    );
+    const byId = calls
+      .filter((c) => !GLOBAL_MODELS.has(c.model))
+      .filter((c) => c.op === "findFirst" || c.op === "findUnique");
     expect(byId.length).toBeGreaterThan(0);
     for (const call of byId) {
       expect(churchIdsIn(call.args)).toContain(OURS);
@@ -167,7 +245,7 @@ describe("repository tenant scoping", () => {
   it("does not fetch a single record with findUnique on a bare id", async () => {
     await exerciseEveryRepository();
     const bareIdLookups = calls.filter((c) => {
-      if (c.op !== "findUnique") return false;
+      if (c.op !== "findUnique" || GLOBAL_MODELS.has(c.model)) return false;
       const where = (c.args as { where?: Record<string, unknown> }).where ?? {};
       return "id" in where && !("churchId" in where);
     });

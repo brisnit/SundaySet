@@ -47,3 +47,6 @@ next-env.d.ts
 
 # prisma generated client
 /src/generated
+
+# dev-only upload fallback (production uses Vercel Blob)
+/.uploads

@@ -100,7 +100,10 @@ describe.skipIf(!dbReachable)("cross-tenant isolation", () => {
 
   afterAll(async () => {
     await purge();
-    await db.$disconnect();
+    // No $disconnect() here: the Prisma client is a module-level singleton shared
+    // with every other test file, and Vitest runs files in parallel. Disconnecting
+    // when this file finishes tore the pool out from under the others. The pool
+    // closes on process exit.
   });
 
   it("lists only the caller's own songs", async () => {

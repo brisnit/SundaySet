@@ -4,7 +4,7 @@
 > this project. Update it at the end of every working session.
 
 **Last updated:** 2026-08-24
-**Status:** **M1, M2 and M3 complete and verified.** Awaiting UX/product review before M4.
+**Status:** **M1–M4 complete and verified** (103 tests). Next: M5 Planning.
 **Review cadence:** check in at phase boundaries — after M1–M3, after M4–M5, after M6–M7.
 
 ---
@@ -424,6 +424,7 @@ Never hard-code credentials. Secrets live only in `.env` / Vercel env vars.
 | 2026-08-24 | 1 | Inspected repo (empty), verified toolchain, produced architecture / schema / routes / sequence / risks. Created this document. |
 | 2026-08-24 | 1 | Decisions resolved: Neon (D1), password + magic link (D2), OpenAI default (D3), phase-boundary reviews. |
 | 2026-08-24 | 1 | **M1 complete**: scaffold, tooling, env contract, db client, liturgical domain + tests. **M2 schema written and migrated.** Verify green. |
+| 2026-08-24 | 4 | **M4 Songs complete**: CRUD, URL-driven search/filter/sort, song detail with play history, chord chart editor + print view, PDF upload behind a storage adapter, Discover with scored recommendations. See §17. |
 | 2026-08-24 | 3 | Fixed sign-in failure: malformed `authjs.callback-url` cookie + `AUTH_URL` pinned to port 3000. See §16. Verify green (71 tests). |
 | 2026-08-24 | 2 | Pushed `main` to GitHub. **M2 complete**: Auth.js, roles, repositories, scoping + isolation tests. **M3 complete**: 60-song seed with a year of history. App shell and read-only pages built so the product can be reviewed. Verify green (58 tests). |
 
@@ -565,3 +566,43 @@ production domain.
 not a credentials problem. Check the server log for the `[auth][error]` line —
 an unreachable database surfaces as `CallbackRouteError` and is handled
 gracefully with a friendly message, which is a different failure.
+
+
+---
+
+## 17. M4 — Songs
+
+**Shipped**
+| Area | Notes |
+|---|---|
+| CRUD | `/songs/new`, `/songs/[id]`, `/songs/[id]/edit`; retire (reversible, keeps history) vs delete |
+| Search & filters | State lives in the URL, so a filtered library is shareable and the list stays server-rendered |
+| Song detail | Rotation verdict, 90-day and YTD counts, full play history |
+| Chord charts | Sectioned editor storing `{label, type, lines:[{chords, lyrics}]}`; pasted "chords over lyrics" text is parsed into that shape so transposition can be added without a migration |
+| Print view | Its own `(print)` route group — no nav, no chrome. Browser Print-to-PDF is the MVP export |
+| PDF upload | `lib/storage` adapter: Vercel Blob in production, local disk in development only |
+| Discover | Scored against the church's own library and profile, with a Hot New Song card |
+
+**Design decisions**
+- **`scoreCandidate` is pure and dependency-free.** The MVP signal is the church's own
+  library, not general popularity (popularity is capped at 20 of 100). Real music
+  intelligence becomes another weighted term without callers changing. An avoid-list
+  entry is an absolute veto, not a penalty.
+- **Discover artwork is generated from the title hash.** Nothing is scraped or hotlinked.
+- **Writes use `updateMany`/`deleteMany` with a scoped `where`**, never `update`/`delete`,
+  which demand a unique selector and would key on a bare id. A wrong id affects zero rows.
+  Tested in both directions.
+- **`SongChart` has no `churchId`.** `upsertSongChart` proves ownership of the parent song
+  through a scoped `findFirst` first; a test asserts the chart is never written when that
+  lookup misses.
+- **Print lives outside `(app)`** so it inherits no shell. Pages there still call
+  `requireChurchContext()`, so dropping the layout drops no authorization.
+
+**Environment gotchas found**
+| Problem | Resolution |
+|---|---|
+| **`~/Desktop` is symlinked into iCloud Drive.** iCloud created `"routes.d 2.ts"` conflict copies of `.next/types/*`, breaking typecheck, and its indexing drove load average past 40 | `* 2.*` excluded in `tsconfig`, `eslint` and `prettier`. **The real fix is on the user's machine** — exclude this project (or at least `.next` and `node_modules`) from iCloud sync |
+| Test suite flaked ~1 run in 3 with Postgres `08P01` | Parallel Vitest workers interleaved queries on one shared Prisma connection. `fileParallelism: false`; suite still runs in ~1.5s |
+| Never run `next build`/`typegen` while a server is running | Concurrent writes to `.next` multiply the iCloud conflict copies |
+
+**Still open:** onboarding screens, Neon for production, `OPENAI_API_KEY` for M7.
