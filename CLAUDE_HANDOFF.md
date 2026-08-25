@@ -424,6 +424,7 @@ Never hard-code credentials. Secrets live only in `.env` / Vercel env vars.
 | 2026-08-24 | 1 | Inspected repo (empty), verified toolchain, produced architecture / schema / routes / sequence / risks. Created this document. |
 | 2026-08-24 | 1 | Decisions resolved: Neon (D1), password + magic link (D2), OpenAI default (D3), phase-boundary reviews. |
 | 2026-08-24 | 1 | **M1 complete**: scaffold, tooling, env contract, db client, liturgical domain + tests. **M2 schema written and migrated.** Verify green. |
+| 2026-08-24 | 3 | Fixed sign-in failure: malformed `authjs.callback-url` cookie + `AUTH_URL` pinned to port 3000. See §16. Verify green (71 tests). |
 | 2026-08-24 | 2 | Pushed `main` to GitHub. **M2 complete**: Auth.js, roles, repositories, scoping + isolation tests. **M3 complete**: 60-song seed with a year of history. App shell and read-only pages built so the product can be reviewed. Verify green (58 tests). |
 
 <!-- Append a row per session. Keep §2 and §9 current — they are what a future session reads first. -->
@@ -520,3 +521,47 @@ print view · PDF upload through Vercel Blob · Discover and the Hot New Song ca
 Still outstanding from earlier decisions: onboarding flow (D2 wiring exists, screens
 do not), Neon provisioning for production, and the `OPENAI_API_KEY` needed to test
 M7 end to end.
+
+
+---
+
+## 16. Sign-in failure — root cause and fix (session 3)
+
+**Symptom.** After submitting the login form the browser showed raw JSON:
+`{"message":"There was a problem with the server configuration. Check the server logs for more information."}`
+
+**Root cause.** Auth.js validates the `authjs.callback-url` cookie in
+`assertConfig`, which runs *before* anything else. If the value is not a valid
+absolute http(s) URL or a root-relative path, it returns
+`InvalidCallbackUrl` — and for a non-GET request it answers with a raw JSON 500
+**regardless of `pages.error`**, so the configured error page never applies
+(`@auth/core/index.js`, the `htmlPages` branch). The cookie then persists, so
+every later attempt fails identically. Browsers scope cookies by host and
+**ignore the port**, so a stale cookie from any other localhost project poisons
+sign-in here.
+
+Reproduced exactly with:
+`POST /api/auth/callback/password` + `Cookie: authjs.callback-url=not-a-url`.
+
+**Contributing misconfiguration (ours).** `.env` pinned
+`AUTH_URL="http://localhost:3000"`. Auth.js then builds callback URLs against
+that fixed origin no matter which port Next actually bound — so running on any
+other port (very easy, since a stray server holding 3000 pushes `next dev` to
+3001) sent users to the wrong origin after sign-in.
+
+**Fixes**
+| Change | File |
+|---|---|
+| Clear an unusable `authjs.callback-url` cookie on any matched request, making the failure self-healing instead of a permanent dead end | `src/proxy.ts` |
+| Pure validator mirroring `@auth/core`'s `isValidHttpUrl`, covering both plain and `__Secure-` cookie names | `src/lib/auth/callback-url.ts` |
+| `AUTH_URL` removed from `.env`; commented in `.env.example` with an explanation. With `trustHost: true` Auth.js infers the origin per request, so any port works | `.env`, `.env.example` |
+| Login page renders `?error=` in plain language rather than leaving it invisible | `src/app/login/page.tsx` |
+| 13 regression tests | `tests/callback-url.test.ts` |
+
+**Do not reintroduce `AUTH_URL` for local development.** Set it only for a fixed
+production domain.
+
+**If sign-in ever returns that JSON again:** it is a cookie or config assertion,
+not a credentials problem. Check the server log for the `[auth][error]` line —
+an unreachable database surfaces as `CallbackRouteError` and is handled
+gracefully with a friendly message, which is a different failure.
