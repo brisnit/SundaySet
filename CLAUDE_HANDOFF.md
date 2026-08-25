@@ -4,8 +4,108 @@
 > this project. Update it at the end of every working session.
 
 **Last updated:** 2026-08-24
-**Status:** **M1–M4 complete and verified** (103 tests). Next: M5 Planning.
+**Status:** **M1–M4 complete and verified** (103 tests). **M5 has NOT started.**
+**Project moved out of iCloud** to `~/Developer/SetMeister` — see §18.
 **Review cadence:** check in at phase boundaries — after M1–M3, after M4–M5, after M6–M7.
+
+---
+
+# NEXT SESSION — START HERE: M5 PLANNING
+
+**M5 has not been started.** The user has additional product/UX instructions to give
+before it begins. Do not start building M5 unprompted.
+
+## Current state
+| | |
+|---|---|
+| Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
+| Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
+| Tests | **103 passing**, 9 files. `npm run verify` green (lint + typecheck + test + build) |
+| Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
+| Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
+
+## After a computer restart
+
+```bash
+# 1. Local Postgres — leave this running in its own terminal.
+cd ~/Developer/SetMeister
+npx prisma dev --name setmeister
+
+# 2. App, in a second terminal.
+cd ~/Developer/SetMeister
+npm run dev            # http://localhost:3000
+```
+
+Nothing else is required. Dependencies, the database and its seeded data all
+persist across a reboot.
+
+### If the database ports changed
+`prisma dev` has so far reassigned the **same** ports every start (51214 main,
+51215 shadow), so `.env` normally needs no edit. If it prints different ones,
+copy them into `.env`:
+
+```
+DATABASE_URL="…:<new main port>/template1?sslmode=disable&connection_limit=10&…"
+DIRECT_URL="…:<new main port>/…"        # same as DATABASE_URL locally
+SHADOW_DATABASE_URL="…:<new shadow port>/…"
+```
+
+### First request after starting Postgres may 500
+pglite needs a moment to warm up. The first page load can fail with Prisma
+`P1017 ConnectionClosed`; reload and it is fine. Not a code fault — do not
+"fix" it by changing the data layer.
+
+### If the database is ever empty or lost
+```bash
+npm run db:migrate     # apply migrations
+npm run db:seed        # rebuild the demo church (idempotent — wipes and reseeds it)
+```
+
+## Demo login
+| Account | Password | Role |
+|---|---|---|
+| `britt@northminster.example` | `setmeister-demo` | Owner / worship leader |
+| `mike@northminster.example` | `setmeister-demo` | Musician |
+
+The sign-in form is pre-filled with the owner account.
+
+## Implemented
+Auth and tenant-scoped data layer · Home dashboard with live alerts · Song library
+(CRUD, URL-driven search/filter/sort, usage intelligence, play history) · chord chart
+editor and print view · PDF upload behind a storage adapter · Discover with scored
+recommendations and a Hot New Song card · read-only Plan, Team, Messages, Settings.
+
+## Deliberately NOT implemented yet
+- **Ask SetMeister** is a placeholder page that says so. No AI calls are wired up.
+- **Service/Plan pages are read-only.** No service CRUD, no set builder, no drag and
+  drop — that is M5.
+- **Team pages are read-only.** No scheduling, invitations or emails — that is M6.
+- **Onboarding screens** do not exist; the seed stands in for them.
+- **CCLI** has a field and an adapter seam, no data and no integration.
+- **Discover** runs on a seeded catalogue; nothing is fetched or scraped.
+
+## Decisions the next session must preserve
+1. **Do not reintroduce `AUTH_URL` for local development** (§16).
+2. **No `prisma.*` calls in `app/`.** Everything goes through `lib/data/*` with a
+   `ChurchContext`; writes use scoped `updateMany`/`deleteMany`, never `update`/`delete`.
+3. **`proxy.ts` is not an authorization boundary** — pages re-check independently.
+4. **Dates are calendar dates**, stored `@db.Date` + local `"HH:mm"` + church timezone.
+   Never a UTC instant, or recurring services drift across DST.
+5. **`fileParallelism: false` in vitest is load-bearing** — parallel workers interleaved
+   queries on one Prisma connection and flaked ~1 run in 3 with Postgres `08P01`.
+6. **`typecheck` runs `next typegen` first.** `PageProps`/`LayoutProps`/`RouteContext`
+   are generated into `.next/types`, which does not exist on a fresh clone.
+7. **Never run `next build` or `next typegen` while a dev/prod server is running** —
+   concurrent writers corrupt `.next/types`.
+8. **AI proposes, the leader approves.** When M7 arrives, the eligible-song pool is
+   computed in code before the model is called, and re-validated after (§6).
+
+## Known issues
+- Uploads use a **local-disk fallback** in development (`.uploads/`, gitignored).
+  Production requires `BLOB_READ_WRITE_TOKEN`; without it in production, uploads
+  refuse rather than writing to a filesystem that disappears.
+- `OPENAI_API_KEY`, `RESEND_API_KEY` and a Neon database are still unset. Everything
+  degrades gracefully, but M6 email and M7 AI cannot be tested end to end until they exist.
 
 ---
 
@@ -50,7 +150,7 @@ Inspected 2026-08-24.
 |---|---|
 | Remote | `https://github.com/brisnit/SundaySet.git` |
 | Remote refs | **none** — remote is still an empty repository (nothing pushed yet) |
-| Local dir | `/Users/briztheman/Desktop/Websites/SetMeister` |
+| Local dir | `/Users/briztheman/Developer/SetMeister` (moved out of iCloud 2026-08-24) |
 | Local state | branch `main`, Next.js 16 app scaffolded, schema migrated |
 | Prior work found | **None.** Greenfield build. |
 
@@ -424,6 +524,7 @@ Never hard-code credentials. Secrets live only in `.env` / Vercel env vars.
 | 2026-08-24 | 1 | Inspected repo (empty), verified toolchain, produced architecture / schema / routes / sequence / risks. Created this document. |
 | 2026-08-24 | 1 | Decisions resolved: Neon (D1), password + magic link (D2), OpenAI default (D3), phase-boundary reviews. |
 | 2026-08-24 | 1 | **M1 complete**: scaffold, tooling, env contract, db client, liturgical domain + tests. **M2 schema written and migrated.** Verify green. |
+| 2026-08-24 | 5 | Moved the project out of iCloud-synced `~/Desktop` to `~/Developer/SetMeister`; removed the `* 2.*` workarounds; made `typecheck` run `next typegen` first. Shutdown checkpoint written. **M5 not started.** |
 | 2026-08-24 | 4 | **M4 Songs complete**: CRUD, URL-driven search/filter/sort, song detail with play history, chord chart editor + print view, PDF upload behind a storage adapter, Discover with scored recommendations. See §17. |
 | 2026-08-24 | 3 | Fixed sign-in failure: malformed `authjs.callback-url` cookie + `AUTH_URL` pinned to port 3000. See §16. Verify green (71 tests). |
 | 2026-08-24 | 2 | Pushed `main` to GitHub. **M2 complete**: Auth.js, roles, repositories, scoping + isolation tests. **M3 complete**: 60-song seed with a year of history. App shell and read-only pages built so the product can be reviewed. Verify green (58 tests). |
@@ -606,3 +707,39 @@ gracefully with a friendly message, which is a different failure.
 | Never run `next build`/`typegen` while a server is running | Concurrent writes to `.next` multiply the iCloud conflict copies |
 
 **Still open:** onboarding screens, Neon for production, `OPENAI_API_KEY` for M7.
+
+
+---
+
+## 18. Move out of iCloud Drive (session 5)
+
+`~/Desktop` is symlinked into iCloud Drive, so the whole project was being synced.
+iCloud created conflict copies (`routes.d 2.ts`) of the rapidly-rewritten
+`.next/types/*` files, which broke typecheck, and its indexing drove load average
+past 40 — one `tsc` run blocked for over five minutes on I/O.
+
+**Moved** `~/Desktop/Websites/SetMeister` → **`~/Developer/SetMeister`**
+(`~/Developer` is not synced; only Desktop and Documents are).
+
+| Check | Result |
+|---|---|
+| Files copied | 384 = 384 (artifacts excluded and rebuilt) |
+| Git history | 4 commits, `git fsck` clean, remote and tracking intact |
+| Database | Unaffected — `prisma dev` stores data globally under `~/Library/Application Support/prisma-dev-nodejs/setmeister/`, keyed by `--name`, not by project path. 60 songs / 56 services / 208 usage rows verified present |
+| Dependencies | Reinstalled with `npm ci` |
+| `npm run verify` | Green: lint, typecheck, 103 tests, production build |
+| App | Runs, signs in, all routes 200 |
+
+**Workarounds removed** now that the root cause is gone: the `* 2.*` exclusions in
+`tsconfig.json`, `eslint.config.mjs` and `.prettierignore`. Verification still passes
+without them.
+
+**Kept**, because they were never about iCloud: the `.uploads` exclusions, and
+`fileParallelism: false` in the Vitest config.
+
+**Found during the move:** a fresh clone could not typecheck, because
+`PageProps`/`LayoutProps`/`RouteContext` live in `.next/types`, which is gitignored.
+`typecheck` now runs `next typegen` first.
+
+The original copy at `~/Desktop/Websites/SetMeister` was left in place for the user
+to delete.

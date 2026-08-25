@@ -44,6 +44,12 @@ npm install
 cp .env.example .env
 ```
 
+> **Do not keep this project inside an iCloud-synced folder** (`~/Desktop` or
+> `~/Documents` when Desktop & Documents sync is on). iCloud creates conflict
+> copies of the files Next rewrites in `.next/`, which breaks typechecking, and
+> its indexing of `node_modules` is a real source of stalls. The working copy
+> lives at `~/Developer/SetMeister`.
+
 ### Database
 
 Prisma 7 ships a local Postgres, so no Docker or signup is needed for development:
@@ -88,6 +94,7 @@ The sign-in form is pre-filled with the owner account.
 | `npm run dev` | Development server |
 | `npm run build` | Production build |
 | `npm run verify` | lint → typecheck → test → build (run before pushing) |
+| `npx prisma dev --name setmeister` | Start the local Postgres (own terminal) |
 | `npm test` | Vitest |
 | `npm run db:migrate` | Create and apply a migration |
 | `npm run db:seed` | Reseed the demo church |

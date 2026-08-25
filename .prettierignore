@@ -4,4 +4,3 @@ src/generated
 prisma/migrations
 package-lock.json
 .uploads
-* 2.*
