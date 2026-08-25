@@ -2,6 +2,7 @@ import "server-only";
 
 import type { ServiceStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
+import { hasSermonContent, type ServiceInput } from "@/lib/validation/service";
 
 import { NotFoundError, scope, scopedById, type ChurchContext } from "./context";
 
@@ -102,4 +103,95 @@ export async function serviceCounts(ctx: ChurchContext, now: Date = new Date()) 
     }),
   ]);
   return { draft, upcoming, awaitingResponse, openPositions };
+}
+
+// ---------------------------------------------------------------------------
+// Writes
+//
+// Same rules as the song layer: scoped updateMany/deleteMany rather than
+// update/delete, which demand a unique selector and would key on a bare id.
+// Sermon carries no churchId of its own, so it is only ever touched after
+// ownership of the parent service has been proven.
+// ---------------------------------------------------------------------------
+
+/**
+ * A service type referenced by id must belong to the caller's church, or one
+ * church could attach its services to another's schedule.
+ */
+async function assertServiceTypeOwned(ctx: ChurchContext, serviceTypeId?: string) {
+  if (!serviceTypeId) return;
+  const owned = await db.serviceType.findFirst({
+    where: { id: serviceTypeId, ...scope(ctx) },
+    select: { id: true },
+  });
+  if (!owned) throw new NotFoundError("Service type");
+}
+
+function sermonFields(input: ServiceInput) {
+  return {
+    title: input.sermonTitle ?? null,
+    series: input.sermonSeries ?? null,
+    scripture: input.sermonScripture ?? null,
+    description: input.sermonDescription ?? null,
+  };
+}
+
+function serviceFields(input: ServiceInput) {
+  return {
+    date: input.date,
+    serviceTypeId: input.serviceTypeId ?? null,
+    startTime: input.startTime,
+    callTime: input.callTime ?? null,
+    title: input.title ?? null,
+    notes: input.notes ?? null,
+    status: input.status,
+  };
+}
+
+export async function createService(ctx: ChurchContext, input: ServiceInput) {
+  await assertServiceTypeOwned(ctx, input.serviceTypeId);
+
+  return db.service.create({
+    data: {
+      ...serviceFields(input),
+      churchId: ctx.churchId,
+      createdById: ctx.userId,
+      ...(hasSermonContent(input)
+        ? { sermon: { create: sermonFields(input) } }
+        : {}),
+    },
+  });
+}
+
+export async function updateService(
+  ctx: ChurchContext,
+  id: string,
+  input: ServiceInput,
+) {
+  await assertServiceTypeOwned(ctx, input.serviceTypeId);
+
+  const { count } = await db.service.updateMany({
+    where: scopedById(ctx, id),
+    data: serviceFields(input),
+  });
+  // A zero count means the service is not this church's — indistinguishable
+  // from it not existing, which is the point.
+  if (count === 0) throw new NotFoundError("Service");
+
+  if (hasSermonContent(input)) {
+    await db.sermon.upsert({
+      where: { serviceId: id },
+      create: { serviceId: id, ...sermonFields(input) },
+      update: sermonFields(input),
+    });
+  } else {
+    // Clearing every sermon field removes the record rather than leaving an
+    // empty one behind for the AI planner to read as a real theme.
+    await db.sermon.deleteMany({ where: { serviceId: id } });
+  }
+}
+
+export async function deleteService(ctx: ChurchContext, id: string) {
+  const { count } = await db.service.deleteMany({ where: scopedById(ctx, id) });
+  if (count === 0) throw new NotFoundError("Service");
 }

@@ -20,7 +20,7 @@ before it begins. Do not start building M5 unprompted.
 |---|---|
 | Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
 | Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
-| Tests | **103 passing**, 9 files. `npm run verify` green (lint + typecheck + test + build) |
+| Tests | **143 passing**, 11 files. `npm run verify` green (lint + typecheck + test + build) |
 | Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
 | Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
 
@@ -77,8 +77,8 @@ recommendations and a Hot New Song card · read-only Plan, Team, Messages, Setti
 
 ## Deliberately NOT implemented yet
 - **Ask SetMeister** is a placeholder page that says so. No AI calls are wired up.
-- **Service/Plan pages are read-only.** No service CRUD, no set builder, no drag and
-  drop — that is M5.
+- **Service create/edit exists** (Block 1). **No set builder and no assignment UI yet** —
+  the Setlist and Team sections on `/plan/[serviceId]` are deliberate placeholders.
 - **Team pages are read-only.** No scheduling, invitations or emails — that is M6.
 - **Onboarding screens** do not exist; the seed stands in for them.
 - **CCLI** has a field and an adapter seam, no data and no integration.

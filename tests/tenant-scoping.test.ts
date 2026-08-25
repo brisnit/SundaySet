@@ -55,6 +55,9 @@ const {
   listRecentServices,
   getServiceById,
   serviceCounts,
+  createService,
+  updateService,
+  deleteService,
 } = await import("@/lib/data/services");
 const { listTeamMembers, getTeamMemberById, listPositions, teamStats } =
   await import("@/lib/data/team");
@@ -114,7 +117,7 @@ async function ignoreNotFound(fn: () => Promise<unknown>) {
  * separately below rather than waived.
  */
 const GLOBAL_MODELS = new Set(["catalogSong"]);
-const PARENT_SCOPED_MODELS = new Set(["songChart"]);
+const PARENT_SCOPED_MODELS = new Set(["songChart", "sermon"]);
 
 const SONG_INPUT: Parameters<typeof createSong>[1] = {
   title: "New Song",
@@ -136,6 +139,20 @@ const SONG_INPUT: Parameters<typeof createSong>[1] = {
   spotifyUrl: undefined,
   appleMusicUrl: undefined,
   youtubeUrl: undefined,
+};
+
+const SERVICE_INPUT: Parameters<typeof createService>[1] = {
+  date: new Date(Date.UTC(2026, 8, 6)),
+  serviceTypeId: undefined,
+  startTime: "10:00",
+  callTime: undefined,
+  title: undefined,
+  notes: undefined,
+  status: "DRAFT",
+  sermonTitle: undefined,
+  sermonSeries: undefined,
+  sermonScripture: undefined,
+  sermonDescription: undefined,
 };
 
 const CHART_INPUT: Parameters<typeof upsertSongChart>[2] = {
@@ -170,6 +187,15 @@ async function exerciseEveryRepository() {
   await ignoreNotFound(() => deleteSong(ctx, "song_from_another_church"));
   await ignoreNotFound(() => upsertSongChart(ctx, "song_from_another_church", CHART_INPUT));
   await ignoreNotFound(() => addSongFromCatalog(ctx, "catalog_song"));
+  await createService(ctx, SERVICE_INPUT);
+  await ignoreNotFound(() =>
+    updateService(ctx, "service_from_another_church", SERVICE_INPUT),
+  );
+  await ignoreNotFound(() => deleteService(ctx, "service_from_another_church"));
+  // A service type referenced by id must be re-checked against the church.
+  await ignoreNotFound(() =>
+    createService(ctx, { ...SERVICE_INPUT, serviceTypeId: "type_from_another_church" }),
+  );
 }
 
 beforeEach(() => {
@@ -198,6 +224,15 @@ describe("repository tenant scoping", () => {
       .filter((c) => !GLOBAL_MODELS.has(c.model) && !PARENT_SCOPED_MODELS.has(c.model))
       .filter((c) => !churchIdsIn(c.args).includes(OURS));
     expect(unscoped.map((c) => `${c.model}.${c.op}`)).toEqual([]);
+  });
+
+  it("re-checks a referenced service type against the caller's church", async () => {
+    await exerciseEveryRepository();
+    const typeLookups = calls.filter((c) => c.model === "serviceType");
+    expect(typeLookups.length).toBeGreaterThan(0);
+    for (const call of typeLookups) {
+      expect(churchIdsIn(call.args)).toContain(OURS);
+    }
   });
 
   it("checks ownership of the parent song before touching its chart", async () => {
