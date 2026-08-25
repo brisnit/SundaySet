@@ -4,7 +4,7 @@
 > this project. Update it at the end of every working session.
 
 **Last updated:** 2026-08-24
-**Status:** **M1 foundation complete and verified. M2 schema migrated.** Next: auth + data layer, then M3 seed.
+**Status:** **M1, M2 and M3 complete and verified.** Awaiting UX/product review before M4.
 **Review cadence:** check in at phase boundaries — after M1–M3, after M4–M5, after M6–M7.
 
 ---
@@ -54,12 +54,23 @@ Inspected 2026-08-24.
 | Local state | branch `main`, Next.js 16 app scaffolded, schema migrated |
 | Prior work found | **None.** Greenfield build. |
 
-### What exists and passes (`npm run verify`)
-- Next.js 16.3.2 / React 19.2.8 / TypeScript strict / Tailwind v4, `src/` + `@/*` alias
-- Full Prisma schema (30 models, 22 enums) — migrated as `20260824214610_init`
-- `src/lib/env.ts` (Zod env contract + `features` flags), `src/lib/db.ts` (pooled client)
-- `src/lib/domain/liturgical.ts` + 17 passing tests
-- lint / typecheck / test / build all green
+### What exists and passes (`npm run verify` — 58 tests, all green)
+**M1 Foundation** — Next.js 16.3.2 / React 19.2.8 / TS strict / Tailwind v4, `@/*` alias,
+Zod env contract with graceful feature degradation, pooled Prisma client, design tokens,
+app shell with sidebar + mobile bottom nav.
+
+**M2 Data & auth** — 30-model schema migrated (`20260824214610_init`). Auth.js v5 with
+password + optional Resend magic link, `proxy.ts` route guard, `requireChurchContext()`,
+role/permission matrix, tenant-scoped `lib/data` repositories.
+
+**M3 Seed** — Northminster Community Church: 60 songs (15 hymns), 52 weeks of service
+history, 15 team members with blockouts, 4 upcoming Sundays in a sermon series.
+
+**Pages rendering real data:** `/` `/login` `/home` `/plan` `/songs` `/team` `/messages`
+`/settings` `/ask`. Sign-in verified end to end against the running production build.
+
+**Tests (58):** liturgical calendar (17) · song usage intelligence (14) · role matrix (12)
+· tenant scoping via recording stub (7) · cross-tenant isolation against real data (8).
 
 ### Local toolchain
 | Tool | Status |
@@ -413,6 +424,7 @@ Never hard-code credentials. Secrets live only in `.env` / Vercel env vars.
 | 2026-08-24 | 1 | Inspected repo (empty), verified toolchain, produced architecture / schema / routes / sequence / risks. Created this document. |
 | 2026-08-24 | 1 | Decisions resolved: Neon (D1), password + magic link (D2), OpenAI default (D3), phase-boundary reviews. |
 | 2026-08-24 | 1 | **M1 complete**: scaffold, tooling, env contract, db client, liturgical domain + tests. **M2 schema written and migrated.** Verify green. |
+| 2026-08-24 | 2 | Pushed `main` to GitHub. **M2 complete**: Auth.js, roles, repositories, scoping + isolation tests. **M3 complete**: 60-song seed with a year of history. App shell and read-only pages built so the product can be reviewed. Verify green (58 tests). |
 
 <!-- Append a row per session. Keep §2 and §9 current — they are what a future session reads first. -->
 
@@ -471,3 +483,40 @@ local work — see D1.
 - `create-next-app` **rejects the capitalized directory name** `SetMeister` (npm package
   names cannot contain capitals). The app was scaffolded into a lowercase temp subdir
   and hoisted. `package.json` name is `setmeister`.
+
+
+---
+
+## 14. Decisions made while building M2 / M3
+
+| Decision | Rationale |
+|---|---|
+| **Session establishes identity only; church + role are re-read from the DB per request** | A JWT is never trusted for authorization, so revoking a membership takes effect immediately rather than at token expiry. `getChurchContext()` is wrapped in React `cache` to dedupe within a request. |
+| **`proxy.ts` is a UX redirect, not a security boundary** | It checks cookie *presence*, not validity. Every page and action calls `requireChurchContext()` / `requirePermission()` independently. Do not move authorization into it. |
+| **`findFirst({ id, churchId })`, never `findUnique({ id })`** | Looking a row up by primary key and checking ownership afterwards is the classic cross-tenant leak. A test asserts no bare-id `findUnique` reaches the database. |
+| **Two tenancy test layers** | `tenant-scoping.test.ts` uses a recording stub and runs everywhere including CI with no database. `tenant-isolation.test.ts` exercises real rows and skips loudly when no database is reachable. |
+| **Seed history is composed, not random** | The first attempt spread plays evenly across all 60 songs, so nothing was ever Overplayed or Never-played and the usage feature had nothing to show. History is now deliberately shaped: two overused favourites, a tight mid rotation, a rested set, and new songs never sung. |
+| **Per-pool cursors in the seed** | Indexing a pool by week number skips most of a large pool, which left CORE songs marked "never played" — a data contradiction. Cursors guarantee even traversal. |
+| **Missing-chart alert counts only upcoming songs** | A library-wide count read "56 songs have no chord chart", which is true but not actionable. Nobody chases a chart for a song they are not about to play. |
+| **CCLI numbers deliberately absent from seed** | Fabricated numbers would look like a working integration (D8). The field and adapter seam exist; the data does not. |
+| **Charts seeded for public-domain hymns only** | D6. Reproducing copyrighted lyrics at scale is genuine legal exposure. |
+
+### Gotcha worth remembering
+Historical weeks are counted as **negative** offsets, and JavaScript's `%` keeps the
+sign — `w % 3 === 2` is never true for negative `w`. This silently dropped two songs
+from the entire seeded history. Count forward from the oldest week (`const k = -w`)
+before taking a modulus.
+
+---
+
+## 15. Next up — M4 (Songs)
+
+Current pages are read-only. M4 adds:
+song CRUD and the add-song flow · search, filters and sort wired to the existing
+`SongFilters` · song detail with full usage history · the chord chart editor and
+print view · PDF upload through Vercel Blob · Discover and the Hot New Song card
+(seeded `CatalogSong` rows and `DISCOVER_EXTRAS` are already in the database).
+
+Still outstanding from earlier decisions: onboarding flow (D2 wiring exists, screens
+do not), Neon provisioning for production, and the `OPENAI_API_KEY` needed to test
+M7 end to end.

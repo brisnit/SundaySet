@@ -1,26 +1,136 @@
 @import "tailwindcss";
 
+/**
+ * SetMeister design tokens.
+ *
+ * Warm, calm and musical rather than corporate: a paper-white ground with warm
+ * grey ink, and a single ember accent that carries every primary action. One
+ * accent keeps the interface quiet — colour is reserved for meaning (rotation
+ * health, response status), not decoration.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --paper: #fbf9f7;
+  --surface: #ffffff;
+  --surface-sunken: #f4f1ee;
+  --ink: #1c1917;
+  --ink-muted: #6b625c;
+  --ink-subtle: #948b85;
+  --line: #e7e1db;
+  --line-strong: #d6cec7;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --ember: #b4501f;
+  --ember-hover: #9a4319;
+  --ember-soft: #fdf1e9;
+  --ember-ink: #7c3a17;
+
+  --sage: #4a6b52;
+  --sage-soft: #eef3ef;
+  --amber: #8a6410;
+  --amber-soft: #fbf3e0;
+  --clay: #a33b32;
+  --clay-soft: #fbeeec;
+  --slate: #4a5a6b;
+  --slate-soft: #eef1f4;
+
+  --radius: 0.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #16130f;
+    --surface: #1e1a16;
+    --surface-sunken: #120f0c;
+    --ink: #f4efe9;
+    --ink-muted: #a89e95;
+    --ink-subtle: #7d746c;
+    --line: #322c26;
+    --line-strong: #453d35;
+
+    --ember: #e0733d;
+    --ember-hover: #ef8f5e;
+    --ember-soft: #2c1c12;
+    --ember-ink: #f0a279;
+
+    --sage: #8fb598;
+    --sage-soft: #1a231c;
+    --amber: #d8ab55;
+    --amber-soft: #251d0e;
+    --clay: #e08b82;
+    --clay-soft: #2a1815;
+    --slate: #9fb0c2;
+    --slate-soft: #171c21;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ember: var(--ember);
+  --color-ember-hover: var(--ember-hover);
+  --color-ember-soft: var(--ember-soft);
+  --color-ember-ink: var(--ember-ink);
+  --color-sage: var(--sage);
+  --color-sage-soft: var(--sage-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-slate: var(--slate);
+  --color-slate-soft: var(--slate-soft);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-card: var(--radius);
+}
+
+@layer base {
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Visible focus everywhere — required for the WCAG AA target. */
+  :focus-visible {
+    outline: 2px solid var(--ember);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--ember-soft);
+    color: var(--ember-ink);
+  }
+}
+
+@layer utilities {
+  /* Chord charts must keep their column alignment when wrapped. */
+  .chord-chart {
+    font-family: var(--font-mono);
+    white-space: pre;
+    tab-size: 4;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
 }
