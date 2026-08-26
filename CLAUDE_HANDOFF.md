@@ -20,7 +20,7 @@ before it begins. Do not start building M5 unprompted.
 |---|---|
 | Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
 | Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
-| Tests | **334 passing**, 17 files. `npm run verify` green (lint + typecheck + test + build) |
+| Tests | **339 passing**, 18 files. `npm run verify` green (lint + typecheck + test + build) |
 | Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
 | Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
 
@@ -914,3 +914,65 @@ in that service's setlist**, so a token cannot read the wider library.
   assignment to `PENDING`.
 - Status summary across positions: any decline wins, otherwise all-accepted, otherwise
   awaiting.
+
+
+---
+
+## 23. Production deployment
+
+**Live:** https://sunday-set-ten.vercel.app · Vercel project `sunday-set`
+(team `britt-midgettes-projects`), auto-deploying from `main` on every push.
+**Database:** Neon `neon-beige-lighthouse` (`neondb`), provisioned through the
+Vercel Marketplace integration.
+
+### The database URL is resolved, not copied
+The Neon integration injects `NEON_DATABASE_URL` / `NEON_DATABASE_URL_UNPOOLED`
+(prefixed, because `DATABASE_URL` already existed at the time), and marks every
+value **Sensitive** — so the values cannot be read back and copied into
+`DATABASE_URL` by hand, by anyone.
+
+`src/lib/db-url.ts` therefore accepts any of the names a Postgres provider is
+likely to set, in priority order, treating an empty string as unset. The empty
+`DATABASE_URL` / `DIRECT_URL` placeholders were deleted. **Nothing needs to be
+kept in sync by hand.** If you later want the plain names, just set them — they
+take priority.
+
+### Deploys migrate and bootstrap themselves
+`build` is `prisma generate && prisma migrate deploy && tsx prisma/bootstrap.ts
+&& next build`. Migrations apply before the app serves, and the deploy fails
+loudly if the database is unreachable rather than shipping against a missing
+schema. `prisma/bootstrap.ts` seeds demo data **only when the database contains
+no churches at all** — the seed itself deletes and recreates Northminster, which
+would destroy real work on every deploy.
+
+### Two bugs this surfaced, both now fixed
+1. **`AUTH_SECRET` was empty**, so every auth request returned the same
+   `assertConfig` JSON 500 as §16. Real secrets are now set for production and
+   preview.
+2. **`AI_PROVIDER=""` and `OPENAI_BASE_URL=""`** made the env schema reject an
+   empty enum option and an empty URL, 500ing every request that read config.
+   Blank values are now stripped before validation (`src/lib/env.ts`), so
+   defaults and optionals apply. Same lesson as the FormData `null` fix in §20:
+   *present but empty means unset.*
+
+`AUTH_URL` is deliberately **not set** — pinning it to one origin is the §16 bug,
+and `trustHost` lets Auth.js infer the origin, which also keeps preview
+deployments working.
+
+### Verified against the live site
+Sign-in · all authed pages · seeded data · service detail with setlist and team ·
+invite link generation (correct host) · public `/r/[token]` with **no cookies** ·
+decline → leader sees "Declined" → re-accept.
+
+### Known production gaps
+- **`BLOB_READ_WRITE_TOKEN` is empty**, so chart PDF uploads refuse in
+  production — by design, rather than writing to a disk that vanishes.
+  Provision Vercel Blob to enable them.
+- No email: `RESEND_API_KEY` was removed so no dead magic-link option appears.
+  Invite links are copied and pasted by hand, as intended.
+- Production currently holds **demo data**. Replacing it with the real church is
+  a separate step.
+
+> **Action ids differ per build.** When smoke-testing a server action over HTTP
+> against production, read the id from the deployed client chunk
+> (`createServerReference("<id>",…,"<name>")`) — a local build's ids will not match.
