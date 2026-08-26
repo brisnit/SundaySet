@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import { db } from "@/lib/db";
 import type { TeamMemberInput } from "@/lib/validation/team";
 
@@ -19,7 +21,14 @@ export async function listTeamMembers(
   });
 }
 
-export async function getTeamMemberById(ctx: ChurchContext, id: string) {
+/**
+ * Wrapped in React `cache` because generateMetadata and the page body both read
+ * the same record, which was two identical cross-region queries per page view.
+ * `getChurchContext` is itself cached, so ctx is the same object reference
+ * within a request and the memo key matches.
+ */
+export const getTeamMemberById = cache(
+  async (ctx: ChurchContext, id: string) => {
   const member = await db.teamMember.findFirst({
     where: scopedById(ctx, id),
     include: {
@@ -33,9 +42,10 @@ export async function getTeamMemberById(ctx: ChurchContext, id: string) {
       },
     },
   });
-  if (!member) throw new NotFoundError("Team member");
-  return member;
-}
+    if (!member) throw new NotFoundError("Team member");
+    return member;
+  },
+);
 
 export async function listPositions(ctx: ChurchContext) {
   return db.position.findMany({

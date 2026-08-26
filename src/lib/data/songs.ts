@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type { Familiarity, SongStatus, SongType } from "@/generated/prisma/enums";
 import type { ChartInput, SongInput } from "@/lib/validation/song";
 import { db } from "@/lib/db";
@@ -131,11 +133,16 @@ export async function listSongs(
   });
 }
 
-export async function getSongById(
-  ctx: ChurchContext,
-  id: string,
-  today: Date = new Date(),
-) {
+/**
+ * Wrapped in React `cache` because generateMetadata and the page body both read
+ * the same song — two identical cross-region queries per view.
+ *
+ * `today` is excluded from the signature on purpose: a `new Date()` default
+ * would be a different value on each call and the memo would never hit. Usage
+ * is classified against the request's own clock inside.
+ */
+export const getSongById = cache(async (ctx: ChurchContext, id: string) => {
+  const today = new Date();
   const song = await db.song.findFirst({
     where: scopedById(ctx, id),
     include: {
@@ -162,7 +169,7 @@ export async function getSongById(
       today,
     ),
   };
-}
+});
 
 export async function songLibraryStats(ctx: ChurchContext) {
   const [total, active, hymns, charts] = await Promise.all([

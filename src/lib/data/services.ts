@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type { ServiceStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import type { ServiceInput } from "@/lib/validation/service";
@@ -82,14 +84,22 @@ export async function listRecentServices(
   });
 }
 
-export async function getServiceById(ctx: ChurchContext, id: string) {
-  const service = await db.service.findFirst({
-    where: scopedById(ctx, id),
-    include: serviceSummary,
-  });
-  if (!service) throw new NotFoundError("Service");
-  return service;
-}
+/**
+ * Wrapped in React `cache` because generateMetadata and the page body both read
+ * the same record, which was two identical cross-region queries per page view.
+ * `getChurchContext` is itself cached, so ctx is the same object reference
+ * within a request and the memo key matches.
+ */
+export const getServiceById = cache(
+  async (ctx: ChurchContext, id: string) => {
+    const service = await db.service.findFirst({
+      where: scopedById(ctx, id),
+      include: serviceSummary,
+    });
+    if (!service) throw new NotFoundError("Service");
+    return service;
+  },
+);
 
 export async function serviceCounts(ctx: ChurchContext, now: Date = new Date()) {
   const [draft, upcoming, awaitingResponse, openPositions] = await Promise.all([
