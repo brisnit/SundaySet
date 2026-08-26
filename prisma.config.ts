@@ -1,6 +1,8 @@
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
+import { resolveDirectUrl } from "./src/lib/db-url";
+
 /**
  * CLI-only configuration (migrate / studio / db pull).
  *
@@ -16,7 +18,7 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
+    url: resolveDirectUrl(),
     shadowDatabaseUrl: process.env["SHADOW_DATABASE_URL"],
   },
 });

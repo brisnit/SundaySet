@@ -5,6 +5,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 import type { SongType } from "../src/generated/prisma/enums";
 import { hashPassword } from "../src/lib/auth/password";
+import { resolvePooledUrl } from "../src/lib/db-url";
 import { SEED_CHARTS, SEED_SONGS } from "./seed-data/songs";
 import {
   DISCOVER_EXTRAS,
@@ -14,7 +15,7 @@ import {
 } from "./seed-data/team";
 
 const db = new PrismaClient({
-  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+  adapter: new PrismaPg({ connectionString: resolvePooledUrl() }),
 });
 
 const CHURCH_SLUG = "northminster";

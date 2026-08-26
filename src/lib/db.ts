@@ -3,6 +3,7 @@ import "server-only";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "@/generated/prisma/client";
+import { resolvePooledUrl } from "@/lib/db-url";
 
 /**
  * Prisma 7 requires a driver adapter. We pass the POOLED connection string here
@@ -15,7 +16,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function createClient() {
-  const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+  const adapter = new PrismaPg({ connectionString: resolvePooledUrl() });
   return new PrismaClient({
     adapter,
     log:

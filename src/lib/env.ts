@@ -10,7 +10,7 @@ import { z } from "zod";
  * those features degrade with a clear message instead of crashing the process.
  */
 const schema = z.object({
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  DATABASE_URL: z.string().optional(),
   DIRECT_URL: z.string().optional(),
 
   AUTH_SECRET: z.string().min(1, "AUTH_SECRET is required"),
