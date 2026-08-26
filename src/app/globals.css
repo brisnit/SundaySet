@@ -3,62 +3,70 @@
 /**
  * SetMeister design tokens.
  *
- * Warm, calm and musical rather than corporate: a paper-white ground with warm
- * grey ink, and a single ember accent that carries every primary action. One
- * accent keeps the interface quiet — colour is reserved for meaning (rotation
- * health, response status), not decoration.
+ * Black on white: a neutral ground with near-black ink, and a single black
+ * accent carrying every primary action. One accent keeps the interface quiet —
+ * colour is reserved for meaning (rotation health, response status), never
+ * decoration.
+ *
+ * The accent is still named `ember` throughout. It is the semantic slot for
+ * "primary action", not a colour name, so retheming means editing these four
+ * values rather than every component. `--ember-fg` is what goes ON the accent,
+ * so the pair stays legible when it inverts in dark mode.
  */
 :root {
-  --paper: #fbf9f7;
+  --paper: #fafafa;
   --surface: #ffffff;
-  --surface-sunken: #f4f1ee;
-  --ink: #1c1917;
-  --ink-muted: #6b625c;
-  --ink-subtle: #948b85;
-  --line: #e7e1db;
-  --line-strong: #d6cec7;
+  --surface-sunken: #f4f4f5;
+  --ink: #0a0a0a;
+  --ink-muted: #666666;
+  --ink-subtle: #999999;
+  --line: #e5e5e5;
+  --line-strong: #d4d4d4;
 
-  --ember: #b4501f;
-  --ember-hover: #9a4319;
-  --ember-soft: #fdf1e9;
-  --ember-ink: #7c3a17;
+  --ember: #111111;
+  --ember-hover: #000000;
+  --ember-soft: #f4f4f5;
+  --ember-ink: #111111;
+  --ember-fg: #ffffff;
 
-  --sage: #4a6b52;
-  --sage-soft: #eef3ef;
-  --amber: #8a6410;
-  --amber-soft: #fbf3e0;
-  --clay: #a33b32;
-  --clay-soft: #fbeeec;
-  --slate: #4a5a6b;
-  --slate-soft: #eef1f4;
+  --sage: #15803d;
+  --sage-soft: #f0fdf4;
+  --amber: #a16207;
+  --amber-soft: #fefce8;
+  --clay: #b91c1c;
+  --clay-soft: #fef2f2;
+  --slate: #475569;
+  --slate-soft: #f8fafc;
 
   --radius: 0.75rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #16130f;
-    --surface: #1e1a16;
-    --surface-sunken: #120f0c;
-    --ink: #f4efe9;
-    --ink-muted: #a89e95;
-    --ink-subtle: #7d746c;
-    --line: #322c26;
-    --line-strong: #453d35;
+    --paper: #0a0a0a;
+    --surface: #161616;
+    --surface-sunken: #0f0f0f;
+    --ink: #fafafa;
+    --ink-muted: #a1a1a1;
+    --ink-subtle: #737373;
+    --line: #262626;
+    --line-strong: #383838;
 
-    --ember: #e0733d;
-    --ember-hover: #ef8f5e;
-    --ember-soft: #2c1c12;
-    --ember-ink: #f0a279;
+    /* The accent inverts to white so it still reads as "primary action". */
+    --ember: #fafafa;
+    --ember-hover: #ffffff;
+    --ember-soft: #1f1f1f;
+    --ember-ink: #fafafa;
+    --ember-fg: #0a0a0a;
 
-    --sage: #8fb598;
-    --sage-soft: #1a231c;
-    --amber: #d8ab55;
-    --amber-soft: #251d0e;
-    --clay: #e08b82;
-    --clay-soft: #2a1815;
-    --slate: #9fb0c2;
-    --slate-soft: #171c21;
+    --sage: #4ade80;
+    --sage-soft: #0d1f14;
+    --amber: #facc15;
+    --amber-soft: #241f07;
+    --clay: #f87171;
+    --clay-soft: #2a1111;
+    --slate: #94a3b8;
+    --slate-soft: #14181d;
   }
 }
 
@@ -75,6 +83,7 @@
   --color-ember-hover: var(--ember-hover);
   --color-ember-soft: var(--ember-soft);
   --color-ember-ink: var(--ember-ink);
+  --color-ember-fg: var(--ember-fg);
   --color-sage: var(--sage);
   --color-sage-soft: var(--sage-soft);
   --color-amber: var(--amber);

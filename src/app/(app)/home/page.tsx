@@ -33,19 +33,19 @@ export default async function HomePage() {
       <section className="mb-10">
         <Link
           href="/plan/new"
-          className="group flex items-center gap-4 rounded-2xl bg-ember px-5 py-5 text-left transition-colors hover:bg-ember-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember md:px-6 md:py-6"
+          className="group flex items-center gap-4 rounded-2xl bg-ember px-5 py-5 text-left transition-colors hover:bg-ember-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember md:px-6 md:py-6"
         >
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-white/20 text-white"
+            className="grid size-11 shrink-0 place-items-center rounded-full bg-ember-fg/15 text-ember-fg"
           >
             <Plus className="size-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-display text-xl text-white md:text-2xl">
+            <span className="block font-display text-xl text-ember-fg md:text-2xl">
               Create a Set
             </span>
-            <span className="mt-0.5 block text-sm text-white/80">
+            <span className="mt-0.5 block text-sm text-ember-fg/75">
               Pick the songs, set the order, schedule who&rsquo;s playing.
             </span>
           </span>
@@ -78,7 +78,7 @@ export default async function HomePage() {
       <Link
         href="/plan/new"
         aria-label="Create a set"
-        className="fixed right-4 bottom-20 z-30 flex items-center gap-2 rounded-full bg-ember px-5 py-3.5 font-medium text-white shadow-lg shadow-ember/25 transition-colors hover:bg-ember-ink md:hidden"
+        className="fixed right-4 bottom-20 z-30 flex items-center gap-2 rounded-full bg-ember px-5 py-3.5 font-medium text-ember-fg shadow-lg shadow-black/20 transition-colors hover:bg-ember-hover md:hidden"
       >
         <Plus aria-hidden className="size-5" />
         Create a Set
