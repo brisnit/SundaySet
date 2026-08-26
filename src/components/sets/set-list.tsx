@@ -43,7 +43,7 @@ export function SetList({
               <li key={s.id}>
                 <Link
                   href={`/plan/${s.id}`}
-                  className="flex items-center gap-4 rounded-xl border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
+                  className="flex items-start gap-4 rounded-xl border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
                 >
                   <div className="w-11 shrink-0 text-center">
                     <p className="text-[10px] font-semibold tracking-wide text-ink-subtle">
@@ -56,33 +56,31 @@ export function SetList({
 
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium text-ink">{setName(s)}</p>
-                    <p className="text-xs text-ink-muted">
+                    <p className="truncate text-xs text-ink-muted">
                       {formatTime(s.startTime)} · {s.songs.length} song
                       {s.songs.length === 1 ? "" : "s"} · {s.assignments.length}{" "}
                       scheduled
                     </p>
-                    {warnings.length > 0 ? (
-                      <div className="mt-1.5 flex flex-wrap gap-1.5">
-                        {warnings.map((w) => (
-                          <Badge key={w.label} tone={w.tone}>
-                            {w.label}
-                          </Badge>
-                        ))}
-                      </div>
-                    ) : null}
-                  </div>
 
-                  <Badge
-                    tone={
-                      s.status === "DRAFT"
-                        ? "neutral"
-                        : s.status === "COMPLETED"
-                          ? "slate"
-                          : "sage"
-                    }
-                  >
-                    {s.status.replaceAll("_", " ").toLowerCase()}
-                  </Badge>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <Badge
+                        tone={
+                          s.status === "DRAFT"
+                            ? "neutral"
+                            : s.status === "COMPLETED"
+                              ? "slate"
+                              : "sage"
+                        }
+                      >
+                        {s.status.replaceAll("_", " ").toLowerCase()}
+                      </Badge>
+                      {warnings.map((w) => (
+                        <Badge key={w.label} tone={w.tone}>
+                          {w.label}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
                 </Link>
               </li>
             );

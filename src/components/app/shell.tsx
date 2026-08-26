@@ -52,7 +52,12 @@ export function AppShell({
           </Link>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:px-8 md:pt-10 md:pb-16">
+        <main
+          /* Mobile bottom padding clears BOTH the fixed bottom nav (~64px) and
+             the floating Create a Set button above it, so the last row is never
+             hidden underneath them. */
+          className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-40 md:px-8 md:pt-10 md:pb-16"
+        >
           {children}
         </main>
       </div>

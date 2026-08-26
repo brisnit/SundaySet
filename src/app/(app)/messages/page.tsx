@@ -31,18 +31,32 @@ export default async function MessagesPage() {
       ) : (
         <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
           {messages.map((m) => (
-            <li key={m.id} className="flex items-center gap-4 px-4 py-3 text-sm">
+            <li
+              key={m.id}
+              className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3 text-sm"
+            >
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-ink">{m.subject}</p>
-                <p className="text-xs text-ink-muted">
+                <p className="truncate text-xs text-ink-muted">
                   {m.teamMember?.name ?? m.toEmail}
                   {m.service ? ` · ${formatShortDate(m.service.date)}` : ""}
                 </p>
               </div>
-              <Badge tone="outline">{titleCase(m.kind)}</Badge>
-              <Badge tone={m.status === "SENT" ? "sage" : m.status === "FAILED" ? "clay" : "neutral"}>
-                {titleCase(m.status)}
-              </Badge>
+              {/* Wraps as whole pills rather than overflowing on a phone. */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge tone="outline">{titleCase(m.kind)}</Badge>
+                <Badge
+                  tone={
+                    m.status === "SENT"
+                      ? "sage"
+                      : m.status === "FAILED"
+                        ? "clay"
+                        : "neutral"
+                  }
+                >
+                  {titleCase(m.status)}
+                </Badge>
+              </div>
             </li>
           ))}
         </ul>

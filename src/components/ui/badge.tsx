@@ -3,8 +3,17 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * A pill is a single line, always.
+ *
+ * Without `whitespace-nowrap` the label wraps INSIDE the pill and the rounded
+ * shape becomes a tall blob — "1 awaiting reply" rendered as three stacked
+ * lines on a phone. `shrink-0` stops flex siblings squeezing it into that
+ * state in the first place; containers that hold several badges wrap them as
+ * whole pills instead.
+ */
 const badge = cva(
-  "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium",
+  "inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-medium",
   {
     variants: {
       tone: {
