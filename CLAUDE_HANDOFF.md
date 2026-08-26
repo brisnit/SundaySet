@@ -3,31 +3,39 @@
 > **Read this first.** This document is the persistent memory for Claude Code sessions on
 > this project. Update it at the end of every working session.
 
-**Last updated:** 2026-08-24
-**Status:** **M1–M4 complete and verified** (103 tests). **M5 has NOT started.**
-**Project moved out of iCloud** to `~/Developer/SetMeister` — see §18.
-**Review cadence:** check in at phase boundaries — after M1–M3, after M4–M5, after M6–M7.
+**Last updated:** 2026-08-26 (end of night)
+**Status:** **Live in production with demo data.** All five MVP blocks complete.
+**Repository:** `~/Developer/SetMeister` (moved out of iCloud — see §18)
+**Production:** https://sunday-set-ten.vercel.app
+**Commit:** `759a212` — local, `origin/main` and production all in sync
+**Tests:** 339 passing, 18 files · `npm run verify` green
 
 ---
 
-# NEXT SESSION — START HERE: M5 PLANNING
+# NEXT SESSION — START HERE
 
-**M5 has not been started.** The user has additional product/UX instructions to give
-before it begins. Do not start building M5 unprompted.
+## ⚠️ Tomorrow does NOT begin with feature development
 
-## Current state
-| | |
-|---|---|
-| Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
-| Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
-| Tests | **339 passing**, 18 files. `npm run verify` green (lint + typecheck + test + build) |
-| Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
-| Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
+The user was explicit. The order is:
 
-## After a computer restart
+1. **Read this handoff and verify production is healthy.**
+2. **The user uses SetMeister themselves on the live site** — real hands, real phone.
+3. **Capture the UX/workflow changes they want from that actual use.**
+4. **Decide how to replace the demo Northminster data with their real church data,
+   safely** — see §25 before touching anything.
+5. Load their real songs and team.
+6. Configure Vercel Blob so production chart PDFs work (§26).
+7. Prepare one real upcoming service.
+8. Run the full leader → invitation → Accept/Decline workflow with real data.
+9. **Only after all of that**, decide what to build next.
+
+Do not propose or start new features before step 9. If asked "what next?", the answer
+is step 1.
+
+## Restarting the local environment
 
 ```bash
-# 1. Local Postgres — leave this running in its own terminal.
+# 1. Local Postgres — leave running in its own terminal.
 cd ~/Developer/SetMeister
 npx prisma dev --name setmeister
 
@@ -36,77 +44,31 @@ cd ~/Developer/SetMeister
 npm run dev            # http://localhost:3000
 ```
 
-Nothing else is required. Dependencies, the database and its seeded data all
-persist across a reboot.
+Dependencies, the local database and its seeded data all survive a reboot. If
+`prisma dev` prints different ports than 51214/51215, copy them into `.env`.
 
-### If the database ports changed
-`prisma dev` has so far reassigned the **same** ports every start (51214 main,
-51215 shadow), so `.env` normally needs no edit. If it prints different ones,
-copy them into `.env`:
+**The first page load after starting Postgres can 500** while pglite warms up
+(Prisma `P1017`). Reload. Not a code fault — do not "fix" the data layer over it.
 
-```
-DATABASE_URL="…:<new main port>/template1?sslmode=disable&connection_limit=10&…"
-DIRECT_URL="…:<new main port>/…"        # same as DATABASE_URL locally
-SHADOW_DATABASE_URL="…:<new shadow port>/…"
-```
+**Never run `next build` or `next typegen` while a dev server is running** — concurrent
+writers corrupt `.next/types`.
 
-### First request after starting Postgres may 500
-pglite needs a moment to warm up. The first page load can fail with Prisma
-`P1017 ConnectionClosed`; reload and it is fine. Not a code fault — do not
-"fix" it by changing the data layer.
+## Demo login (local and production)
 
-### If the database is ever empty or lost
-```bash
-npm run db:migrate     # apply migrations
-npm run db:seed        # rebuild the demo church (idempotent — wipes and reseeds it)
-```
-
-## Demo login
 | Account | Password | Role |
 |---|---|---|
 | `britt@northminster.example` | `setmeister-demo` | Owner / worship leader |
 | `mike@northminster.example` | `setmeister-demo` | Musician |
 
-The sign-in form is pre-filled with the owner account.
+## Verifying production quickly
 
-## Implemented
-Auth and tenant-scoped data layer · Home dashboard with live alerts · Song library
-(CRUD, URL-driven search/filter/sort, usage intelligence, play history) · chord chart
-editor and print view · PDF upload behind a storage adapter · Discover with scored
-recommendations and a Hot New Song card · read-only Plan, Team, Messages, Settings.
+```bash
+curl -s https://sunday-set-ten.vercel.app/api/auth/csrf     # expect a csrfToken JSON
+npx vercel ls sunday-set                                    # expect newest ● Ready
+```
 
-## Deliberately NOT implemented yet
-- **Ask SetMeister** is a placeholder page that says so. No AI calls are wired up.
-- **Service create/edit and the setlist builder exist** (Blocks 1–2). **No assignment
-  UI yet** — the Team section on `/plan/[serviceId]` is still a deliberate placeholder.
-- **Invite links and public RSVP exist** (Block 5). **No email, SMS or musician
-  accounts** — links are copied and pasted by hand, by design.
-- **Onboarding screens** do not exist; the seed stands in for them.
-- **CCLI** has a field and an adapter seam, no data and no integration.
-- **Discover** runs on a seeded catalogue; nothing is fetched or scraped.
-
-## Decisions the next session must preserve
-1. **Do not reintroduce `AUTH_URL` for local development** (§16).
-2. **No `prisma.*` calls in `app/`.** Everything goes through `lib/data/*` with a
-   `ChurchContext`; writes use scoped `updateMany`/`deleteMany`, never `update`/`delete`.
-3. **`proxy.ts` is not an authorization boundary** — pages re-check independently.
-4. **Dates are calendar dates**, stored `@db.Date` + local `"HH:mm"` + church timezone.
-   Never a UTC instant, or recurring services drift across DST.
-5. **`fileParallelism: false` in vitest is load-bearing** — parallel workers interleaved
-   queries on one Prisma connection and flaked ~1 run in 3 with Postgres `08P01`.
-6. **`typecheck` runs `next typegen` first.** `PageProps`/`LayoutProps`/`RouteContext`
-   are generated into `.next/types`, which does not exist on a fresh clone.
-7. **Never run `next build` or `next typegen` while a dev/prod server is running** —
-   concurrent writers corrupt `.next/types`.
-8. **AI proposes, the leader approves.** When M7 arrives, the eligible-song pool is
-   computed in code before the model is called, and re-validated after (§6).
-
-## Known issues
-- Uploads use a **local-disk fallback** in development (`.uploads/`, gitignored).
-  Production requires `BLOB_READ_WRITE_TOKEN`; without it in production, uploads
-  refuse rather than writing to a filesystem that disappears.
-- `OPENAI_API_KEY`, `RESEND_API_KEY` and a Neon database are still unset. Everything
-  degrades gracefully, but M6 email and M7 AI cannot be tested end to end until they exist.
+A JSON body of `{"message":"There was a problem with the server configuration..."}`
+means an Auth.js config assertion failed — see §16 and §23, not a credentials problem.
 
 ---
 
@@ -525,6 +487,8 @@ Never hard-code credentials. Secrets live only in `.env` / Vercel env vars.
 | 2026-08-24 | 1 | Inspected repo (empty), verified toolchain, produced architecture / schema / routes / sequence / risks. Created this document. |
 | 2026-08-24 | 1 | Decisions resolved: Neon (D1), password + magic link (D2), OpenAI default (D3), phase-boundary reviews. |
 | 2026-08-24 | 1 | **M1 complete**: scaffold, tooling, env contract, db client, liturgical domain + tests. **M2 schema written and migrated.** Verify green. |
+| 2026-08-26 | 7 | **Deployed to production.** Neon provisioned, migrations + guarded bootstrap in the build, `db-url.ts` fallback, two empty-value bugs fixed. Live and verified at https://sunday-set-ten.vercel.app. Handoff rewritten for a fresh session. |
+| 2026-08-26 | 6 | **Blocks 1–5 complete**: service CRUD, setlist builder, team CRUD, assignments with advisory conflicts, invitations + public RSVP. 103 → 339 tests. |
 | 2026-08-24 | 5 | Moved the project out of iCloud-synced `~/Desktop` to `~/Developer/SetMeister`; removed the `* 2.*` workarounds; made `typecheck` run `next typegen` first. Shutdown checkpoint written. **M5 not started.** |
 | 2026-08-24 | 4 | **M4 Songs complete**: CRUD, URL-driven search/filter/sort, song detail with play history, chord chart editor + print view, PDF upload behind a storage adapter, Discover with scored recommendations. See §17. |
 | 2026-08-24 | 3 | Fixed sign-in failure: malformed `authjs.callback-url` cookie + `AUTH_URL` pinned to port 3000. See §16. Verify green (71 tests). |
@@ -613,7 +577,7 @@ before taking a modulus.
 
 ---
 
-## 15. Next up — M4 (Songs)
+## 15. Next up — M4 (Songs) — SUPERSEDED, kept for history; see §24 and §27
 
 Current pages are read-only. M4 adds:
 song CRUD and the add-song flow · search, filters and sort wired to the existing
@@ -976,3 +940,159 @@ decline → leader sees "Declined" → re-accept.
 > **Action ids differ per build.** When smoke-testing a server action over HTTP
 > against production, read the id from the deployed client chunk
 > (`createServerReference("<id>",…,"<name>")`) — a local build's ids will not match.
+
+
+---
+
+## 24. Completed on 2026-08-26
+
+Five blocks, plus the production deployment. Every one verified with `npm run verify`
+and exercised over real HTTP before being committed.
+
+| Block | Commit | What shipped |
+|---|---|---|
+| 1 — Service create/edit/detail | `213a815` | `/plan/new`, `/plan/[serviceId]`, `.../edit`. Sermon on the same form (1:1 relation); clearing every sermon field deletes the row rather than leaving an empty one for the AI planner to read as a theme. Date parsed to UTC midnight, never a local instant. |
+| 2 — Setlist builder | `2d90f08` | Add/remove/reorder/re-key on the service page, searchable picker. `renumber()` parks rows in negative slots inside a transaction because `@@unique([serviceId, position])` is checked per statement. Duplicates refused — `@@unique([serviceId, songId])` already forbids them. |
+| 3 — Team member CRUD | `a919e76` | `/team/new`, profile page, edit. Positions read from the `Position` table, never hardcoded; sync writes only the difference so join rows keep their scheduler `priority`. `userId` stays null — the roster never requires an account. |
+| 4 — Service team scheduling | `25077f6` | Assign / replace / remove per position. One person may hold several positions and a position several people, because the unique triple allows it. |
+| 4 — Scheduling warnings | `25077f6` | `lib/domain/scheduling.ts`: blocked-out, declined, inactive (hard); already-in-service, not-qualified, over-committed (soft). **Advisory only — nobody is ever hidden or blocked.** Recomputed on read, so a blockout added later still surfaces. |
+| 5 — Invitations + public RSVP | `2dcb9ec` | Copy-invite-link, `/r/[token]` with no account, Accept/Decline, `/r/[token]/chart/[songId]`. |
+| Deployment | `6dc9adb` → `759a212` | Neon provisioned, migrations and bootstrap in the build, two empty-value bugs fixed, live and verified. |
+
+### Bugs found and fixed today
+1. **Optional form fields rejected `null`** (§20). `formData.get()` returns `null` for an
+   absent field but `z.string().optional()` only accepts `undefined`. Affected the team,
+   service **and** song schemas; all three now share `lib/validation/form.ts`.
+2. **Empty environment variables rejected as invalid** (§23). `AI_PROVIDER=""` and
+   `OPENAI_BASE_URL=""` 500'd every request that read config. Blanks are now stripped
+   before validation.
+3. **`AUTH_SECRET` was empty in production**, producing the §16 `assertConfig` JSON 500.
+
+Both #1 and #2 are the same lesson: **present but empty means unset.** Keep it in mind
+whenever adding a field that can legitimately be blank.
+
+---
+
+## 25. ⚠️ Production data safety — read before touching the database
+
+### Production currently contains DEMO DATA
+`https://sunday-set-ten.vercel.app` holds the seeded **Northminster Community Church**
+demo: 60 songs, 15 team members, 56 services, invented people and history.
+
+**This is not real church data.** Do not present it as such, do not build reporting on
+it, and do not assume any row in it is meaningful. Replacing it with the user's real
+Northminster data is an explicit, planned step (tomorrow, item 4) — and it needs a
+deliberate decision about *how*, not an improvised wipe.
+
+### The bootstrap seed must NEVER overwrite real data
+`prisma/bootstrap.ts` runs on **every deploy**, before `next build`.
+
+`prisma/seed.ts` **deletes and recreates** the Northminster church, its users and its
+catalog songs. Run unguarded against a live database that is being used, it would
+destroy real work every time anyone pushed.
+
+The guard is therefore deliberately blunt:
+
+```ts
+const churches = await db.church.count();
+if (churches > 0) return;   // leave it completely alone
+```
+
+**Rules for anyone changing this:**
+- The guard is **"no churches at all"**, not "no demo church". Narrowing it to
+  "delete the demo church only" reintroduces the danger, because the real church may
+  end up on the same slug or the seed may be pointed at it.
+- **Never** add a `--force`, `RESET_DB`, or "reseed on deploy" switch to the build.
+  A destructive operation must not be reachable from an automated pipeline.
+- Replacing production data is a **manual, one-off, reviewed** operation — not
+  something a `git push` can trigger.
+- If seeding real data, prefer **adding** to an empty database over deleting from a
+  populated one.
+
+### Britt Hollis test invitation
+A **live invitation token exists in production** for Britt Hollis on the 30 Aug service,
+created while verifying the flow end to end. It expires **1 Sep 2026** (service date + 2
+days). Her assignment status was restored to `ACCEPTED` afterwards.
+
+It is harmless — it points only at demo data — but it is a real bearer credential.
+**Revoke it** from the service page (Team → Revoke) whenever convenient, or simply let
+it expire. Revoking resets that assignment to `PENDING`, which is why it was left in
+place rather than cleaned up automatically.
+
+---
+
+## 26. `db-url.ts` — do not undo this
+
+`src/lib/db-url.ts` resolves the Postgres connection strings from **whichever variable
+names the provider actually sets**, in priority order, treating an empty string as unset.
+
+### Why it exists
+Vercel's Neon integration injects `NEON_DATABASE_URL` and
+`NEON_DATABASE_URL_UNPOOLED` — prefixed, because a `DATABASE_URL` variable already
+existed when the integration was added — and marks every value **Sensitive**. Sensitive
+values **cannot be read back**: `vercel env pull` returns the literal string
+`[SENSITIVE]`. There is therefore no way to copy them into `DATABASE_URL` by hand
+without going to the Neon dashboard, and doing so would create a second copy of a
+secret that silently drifts when Neon rotates credentials.
+
+### How it works
+| Purpose | Names tried, in order |
+|---|---|
+| Pooled (the running app) | `DATABASE_URL` → `NEON_DATABASE_URL` → `POSTGRES_PRISMA_URL` → `NEON_POSTGRES_PRISMA_URL` → `POSTGRES_URL` → `NEON_POSTGRES_URL` |
+| Direct (migrations) | `DIRECT_URL` → `NEON_DATABASE_URL_UNPOOLED` → `POSTGRES_URL_NON_POOLING` → `NEON_POSTGRES_URL_NON_POOLING`, falling back to the pooled URL |
+
+Used by `prisma.config.ts` (CLI/migrations), `src/lib/db.ts` (runtime) and
+`prisma/seed.ts`. It has **no imports**, because `prisma.config.ts` loads it outside the
+Next.js runtime.
+
+### Rules
+- **`DATABASE_URL` still wins if set.** Local `.env` sets it, so local behaviour is
+  unchanged. Setting the plain names in Vercel later would also just work.
+- **Empty counts as unset.** A variable can exist with no value; `??` would return `""`.
+- **Do not "simplify" this back to `process.env.DATABASE_URL`.** That is what was there
+  before, and it is why the first production deploy failed with
+  `Error: Connection url is empty`.
+- The empty `DATABASE_URL` / `DIRECT_URL` placeholders were **deleted** from Vercel. Do
+  not recreate them empty — an empty value is skipped, but a wrong one would win.
+
+---
+
+## 27. Outstanding — known remaining MVP work
+
+**Do not start any of this without being asked.** Recorded so nothing is lost.
+
+### Blocking a real-data field test
+| Item | Note |
+|---|---|
+| **Vercel Blob not configured** | `BLOB_READ_WRITE_TOKEN` is empty in production, so **chart PDF uploads do not work there**. The storage adapter refuses in production rather than writing to a filesystem that vanishes — deliberate, not a bug. Development uses a local-disk fallback (`.uploads/`, gitignored). Provision Vercel Blob and set the token to enable it. |
+| **Real church data not loaded** | See §25. Needs the user's song list and team roster. |
+| **Bulk song entry** | No import path. Entering 40+ songs through the UI is slow; a one-off setup script was offered and not yet written. |
+
+### Deferred features (never started)
+- **Ask SetMeister / all AI** — placeholder page only. No AI calls anywhere. The
+  architecture in §6 (compute the legal pool in code, validate after) still stands.
+- **Email delivery** — no Resend. `RESEND_API_KEY` was deliberately removed from
+  production so no dead magic-link option appears on the login page. Invite links are
+  copied and pasted by hand, as intended. A verified sending domain takes DNS time.
+- **Messages centre** — placeholder page.
+- **Musician accounts / `/my/schedule`** — musicians respond by token only.
+- **Availability requests and blockout self-service** — blockouts exist in the schema
+  and are read by the conflict engine, but there is no UI to create them.
+- **Onboarding screens** — the seed stands in for them.
+- **Drag-and-drop setlist reordering** — `dnd-kit` is installed; Up/Down buttons ship
+  today and are keyboard-accessible.
+- **CCLI / Spotify / Apple / YouTube** — fields and adapter seams only, no integrations.
+- **Discover** runs on a seeded catalogue; nothing is fetched or scraped.
+
+### Product questions raised and left open
+- **Positions are not tied to services.** `Position` has no relation to `Service` or
+  `ServiceType`, so the scheduler lists all the church's active positions. Per-service-type
+  templates ("Sunday needs 8 roles, Wednesday needs 3") would be a **new model and a
+  migration** (§21).
+- **Invitations are per-assignment**, not per person-per-service (§22). Handled without a
+  migration; the honest long-term shape is keying on `(serviceId, teamMemberId)`.
+- **`team:manage` is OWNER/ADMIN only** — worship leaders can view but not edit the
+  roster. One line in `lib/auth/roles.ts` if that should change.
+- **No decline reason** — no field exists and `Assignment.notes` belongs to the planner.
+- **No hard delete for team members** — deactivate only, to preserve assignment history.
+- **Multiple people per position** is allowed because the schema allows it.
