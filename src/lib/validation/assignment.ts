@@ -16,3 +16,13 @@ export const reassignSchema = z.object({
 export const removeAssignmentSchema = z.object({
   assignmentId: id,
 });
+
+export const inviteSchema = z.object({
+  serviceId: id,
+  teamMemberId: id,
+});
+
+export const respondSchema = z.object({
+  token: z.string().trim().min(32).max(128),
+  outcome: z.enum(["ACCEPTED", "DECLINED"]),
+});

@@ -11,10 +11,21 @@ import {
 } from "@/lib/data/assignments";
 import { NotFoundError } from "@/lib/data/context";
 import {
+  inviteMemberToService,
+  revokeInvitations,
+} from "@/lib/data/invitations";
+import { env } from "@/lib/env";
+import {
   assignSchema,
+  inviteSchema,
   reassignSchema,
   removeAssignmentSchema,
 } from "@/lib/validation/assignment";
+
+/** Absolute base for links pasted into a text message. */
+function appUrl(): string {
+  return env().APP_URL.replace(/\/$/, "");
+}
 
 /**
  * Team assignment mutations.
@@ -99,6 +110,57 @@ export async function removeAssignmentAction(
     if (e instanceof NotFoundError) {
       return { error: "That assignment is already gone." };
     }
+    throw e;
+  }
+
+  refresh(serviceId);
+  return {};
+}
+
+/**
+ * Issues (or reissues) an invitation and returns the link exactly once.
+ *
+ * The raw token is never stored, so this response is the only chance to copy
+ * it. Regenerating replaces any previous link for this person on this service.
+ */
+export async function createInviteLinkAction(
+  serviceId: string,
+  teamMemberId: string,
+): Promise<TeamResult & { url?: string; positions?: number }> {
+  const ctx = await requirePermission("invitations:send");
+
+  const parsed = inviteSchema.safeParse({ serviceId, teamMemberId });
+  if (!parsed.success) return { error: "That invitation could not be created." };
+
+  try {
+    const { token, positions } = await inviteMemberToService(
+      ctx,
+      parsed.data.serviceId,
+      parsed.data.teamMemberId,
+    );
+    refresh(serviceId);
+    return { url: `${appUrl()}/r/${token}`, positions };
+  } catch (e) {
+    if (e instanceof NotFoundError) {
+      return { error: "That person is no longer scheduled for this service." };
+    }
+    throw e;
+  }
+}
+
+export async function revokeInviteAction(
+  serviceId: string,
+  teamMemberId: string,
+): Promise<TeamResult> {
+  const ctx = await requirePermission("invitations:send");
+
+  const parsed = inviteSchema.safeParse({ serviceId, teamMemberId });
+  if (!parsed.success) return { error: "That invitation could not be revoked." };
+
+  try {
+    await revokeInvitations(ctx, parsed.data.serviceId, parsed.data.teamMemberId);
+  } catch (e) {
+    if (e instanceof NotFoundError) return { error: "There is nothing to revoke." };
     throw e;
   }
 

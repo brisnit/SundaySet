@@ -11,10 +11,13 @@ import {
   removeAssignmentAction,
   type TeamResult,
 } from "@/app/(app)/plan/[serviceId]/team-actions";
+import { InviteButton } from "@/components/services/invite-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { findConflicts, candidateRank, type Conflict } from "@/lib/domain/scheduling";
 import { titleCase } from "@/lib/format";
+
+export type InviteState = { invited: boolean };
 
 export type TeamSlotView = {
   positionId: string;
@@ -87,6 +90,8 @@ export function TeamBuilder({
   slots,
   pool,
   canEdit,
+  canInvite,
+  invites,
 }: {
   serviceId: string;
   /** ISO date of the service, for evaluating blockouts in the browser. */
@@ -94,6 +99,9 @@ export function TeamBuilder({
   slots: TeamSlotView[];
   pool: PoolMember[];
   canEdit: boolean;
+  canInvite: boolean;
+  /** teamMemberId -> whether a live invitation exists. */
+  invites: Record<string, boolean>;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -281,6 +289,15 @@ export function TeamBuilder({
                                   </span>
                                   <ConflictList conflicts={a.conflicts} />
                                 </span>
+
+                                {canInvite ? (
+                                  <InviteButton
+                                    serviceId={serviceId}
+                                    teamMemberId={a.teamMemberId}
+                                    name={a.name}
+                                    invited={invites[a.teamMemberId] ?? false}
+                                  />
+                                ) : null}
 
                                 {canEdit ? (
                                   <span className="flex gap-0.5">

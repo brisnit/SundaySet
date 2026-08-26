@@ -20,7 +20,7 @@ before it begins. Do not start building M5 unprompted.
 |---|---|
 | Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
 | Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
-| Tests | **273 passing**, 15 files. `npm run verify` green (lint + typecheck + test + build) |
+| Tests | **334 passing**, 17 files. `npm run verify` green (lint + typecheck + test + build) |
 | Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
 | Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
 
@@ -79,8 +79,8 @@ recommendations and a Hot New Song card · read-only Plan, Team, Messages, Setti
 - **Ask SetMeister** is a placeholder page that says so. No AI calls are wired up.
 - **Service create/edit and the setlist builder exist** (Blocks 1–2). **No assignment
   UI yet** — the Team section on `/plan/[serviceId]` is still a deliberate placeholder.
-- **Team assignments exist** (Block 4). **No invitation tokens, `/r/[token]` or email
-  yet** — that is Block 5.
+- **Invite links and public RSVP exist** (Block 5). **No email, SMS or musician
+  accounts** — links are copied and pasted by hand, by design.
 - **Onboarding screens** do not exist; the seed stands in for them.
 - **CCLI** has a field and an adapter seam, no data and no integration.
 - **Discover** runs on a seeded catalogue; nothing is fetched or scraped.
@@ -859,3 +859,58 @@ clears `respondedAt`, because an acceptance belonged to the person being replace
 ### Permission
 Gated on **`team:schedule`** (OWNER, ADMIN, WORSHIP_LEADER, TEAM_LEADER) — distinct
 from `team:manage`, which edits the roster and is OWNER/ADMIN only.
+
+
+---
+
+## 22. Block 5 — invite links and public RSVP
+
+`Copy invite link` on `/plan/[serviceId]`, and a public `/r/[token]` RSVP page that
+needs no account.
+
+### Tokens
+32 bytes of CSPRNG output, base64url. Only an **HMAC-SHA256 digest** is stored
+(`INVITATION_TOKEN_SECRET`, falling back to `AUTH_SECRET`), so a dump of the
+Invitation table yields no working links and precomputation is useless. The raw token
+is returned exactly once, at generation, and is never readable again.
+
+Tokens carry no church, service or member identifier — nothing is readable off the URL,
+and lookup is by digest only, so a token can never be pointed at another tenant.
+Malformed input is rejected by shape before it costs a query, and malformed,
+unknown and revoked tokens all return the **same** generic page: whether a token ever
+existed is not disclosed.
+
+Expiry is **absolute at service date + 2 days**, so inviting months ahead is fine and
+the link dies once it stops being useful.
+
+> Changing `INVITATION_TOKEN_SECRET` invalidates every outstanding link.
+
+### Multiple positions — how it was handled without a migration
+`Invitation.assignmentId` is `@unique`, so the schema models one invitation **per
+assignment**, not per person-per-service. A musician on two positions therefore has two
+assignments.
+
+Rather than migrate, `inviteMemberToService` issues an invitation for **every** position
+that person holds and surfaces **one** link. Any of their tokens resolves to the same
+page, which lists all their positions and answers for **all of them at once** — one
+link, one decision, no RSVP-per-role. Keeping a row per assignment also means removing
+one position does not kill the links belonging to the others.
+
+**If a schema change is ever wanted**, the honest shape is an invitation keyed on
+(serviceId, teamMemberId) rather than assignmentId. Not needed for the field test.
+
+### Charts for people with no account
+`/songs/**` requires a login, so chart links would have been dead for musicians.
+`/r/[token]/chart/[songId]` serves the chart under the same token and **only for songs
+in that service's setlist**, so a token cannot read the wider library.
+
+### Product decisions
+- **No decline reason.** There is no field for one. `Assignment.notes` is the planner's
+  own field and overloading it would clobber their notes. A dedicated field is the
+  right answer if this is wanted.
+- **Responses can be changed** while the link is valid. Nothing in the schema prevents
+  it, and forcing a musician to phone the leader to correct a mistap helps nobody.
+- **Reissuing a link does not erase an existing answer**; revoking returns the
+  assignment to `PENDING`.
+- Status summary across positions: any decline wins, otherwise all-accepted, otherwise
+  awaiting.

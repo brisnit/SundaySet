@@ -15,6 +15,7 @@ import { NotFoundError } from "@/lib/data/context";
 import { getServiceById } from "@/lib/data/services";
 import { getSetlist, listAddableSongs } from "@/lib/data/setlist";
 import { getServiceTeam, listCandidatePool } from "@/lib/data/assignments";
+import { getInvitationStates } from "@/lib/data/invitations";
 import { formatServiceDate, formatTime, titleCase } from "@/lib/format";
 
 type Service = Awaited<ReturnType<typeof getServiceById>>;
@@ -52,14 +53,16 @@ export default async function ServiceDetailPage({
   const editable = can(ctx.role, "services:manage");
   const canEditSetlist = can(ctx.role, "songs:manage");
   const canSchedule = can(ctx.role, "team:schedule");
+  const canInvite = can(ctx.role, "invitations:send");
 
-  const [setlist, addable, teamSlots, pool] = await Promise.all([
+  const [setlist, addable, teamSlots, pool, inviteStates] = await Promise.all([
     getSetlist(ctx, serviceId),
     canEditSetlist ? listAddableSongs(ctx, serviceId) : Promise.resolve([]),
     getServiceTeam(ctx, serviceId),
     canSchedule
       ? listCandidatePool(ctx, serviceId, { includeInactive: true })
       : Promise.resolve([]),
+    getInvitationStates(ctx, serviceId),
   ]);
   const heading =
     service.title ?? service.sermon?.title ?? formatServiceDate(service.date);
@@ -147,6 +150,10 @@ export default async function ServiceDetailPage({
                 serviceId={service.id}
                 serviceDate={service.date.toISOString()}
                 canEdit={canSchedule}
+                canInvite={canInvite}
+                invites={Object.fromEntries(
+                  [...inviteStates].map(([id, v]) => [id, v.invited]),
+                )}
                 slots={teamSlots}
                 pool={pool.map((m) => ({
                   ...m,
