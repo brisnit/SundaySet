@@ -118,3 +118,28 @@ describe("hasSermonContent", () => {
     expect(hasSermonContent(parsed({ sermonTitle: "   " }))).toBe(false);
   });
 });
+
+describe("absent form fields", () => {
+  // Same null-from-FormData regression as the team form.
+  it("treats optional service fields arriving as null as blank", () => {
+    const r = serviceInputSchema.safeParse({
+      date: "2026-08-30",
+      startTime: "10:00",
+      serviceTypeId: null,
+      callTime: null,
+      title: null,
+      notes: null,
+      sermonTitle: null,
+      sermonSeries: null,
+      sermonScripture: null,
+      sermonDescription: null,
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.callTime).toBeUndefined();
+      expect(r.data.title).toBeUndefined();
+      expect(r.data.serviceTypeId).toBeUndefined();
+      expect(hasSermonContent(r.data)).toBe(false);
+    }
+  });
+});

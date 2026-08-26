@@ -69,8 +69,15 @@ const {
   updateService,
   deleteService,
 } = await import("@/lib/data/services");
-const { listTeamMembers, getTeamMemberById, listPositions, teamStats } =
-  await import("@/lib/data/team");
+const {
+  listTeamMembers,
+  getTeamMemberById,
+  listPositions,
+  teamStats,
+  createTeamMember,
+  updateTeamMember,
+  setTeamMemberActive,
+} = await import("@/lib/data/team");
 const { getWorshipProfile, listServiceTypes, listSpecialDates } = await import(
   "@/lib/data/church"
 );
@@ -135,7 +142,13 @@ async function ignoreNotFound(fn: () => Promise<unknown>) {
  * separately below rather than waived.
  */
 const GLOBAL_MODELS = new Set(["catalogSong"]);
-const PARENT_SCOPED_MODELS = new Set(["songChart", "sermon"]);
+const PARENT_SCOPED_MODELS = new Set([
+  "songChart",
+  "sermon",
+  // TeamMemberPosition is a join row reached only after the parent member is
+  // resolved church-scoped and every position id is re-checked.
+  "teamMemberPosition",
+]);
 
 const SONG_INPUT: Parameters<typeof createSong>[1] = {
   title: "New Song",
@@ -171,6 +184,18 @@ const SERVICE_INPUT: Parameters<typeof createService>[1] = {
   sermonSeries: undefined,
   sermonScripture: undefined,
   sermonDescription: undefined,
+};
+
+const MEMBER_INPUT: Parameters<typeof createTeamMember>[1] = {
+  name: "Someone",
+  email: undefined,
+  phone: undefined,
+  vocalRange: undefined,
+  notes: undefined,
+  active: true,
+  preferredPerMonth: 2,
+  preferredServiceTypeId: undefined,
+  positionIds: [],
 };
 
 const CHART_INPUT: Parameters<typeof upsertSongChart>[2] = {
@@ -222,6 +247,20 @@ async function exerciseEveryRepository() {
   await ignoreNotFound(() => removeSongFromService(ctx, "row_from_another_church"));
   await ignoreNotFound(() => setServiceSongKey(ctx, "row_from_another_church", "G"));
   await ignoreNotFound(() => moveServiceSong(ctx, "row_from_another_church", "up"));
+  await createTeamMember(ctx, MEMBER_INPUT);
+  await ignoreNotFound(() =>
+    updateTeamMember(ctx, "member_from_another_church", MEMBER_INPUT),
+  );
+  await ignoreNotFound(() =>
+    setTeamMemberActive(ctx, "member_from_another_church", false),
+  );
+  // Position ids must be re-checked against the church before being linked.
+  await ignoreNotFound(() =>
+    createTeamMember(ctx, {
+      ...MEMBER_INPUT,
+      positionIds: ["position_from_another_church"],
+    }),
+  );
 }
 
 beforeEach(() => {
@@ -278,6 +317,29 @@ describe("repository tenant scoping", () => {
     for (const m of mutations) {
       expect(churchIdsIn(m.args)).toContain(OURS);
     }
+  });
+
+  it("re-checks referenced positions against the caller's church", async () => {
+    await exerciseEveryRepository();
+    const positionLookups = calls.filter(
+      (c) => c.model === "position" && c.op === "findMany",
+    );
+    expect(positionLookups.length).toBeGreaterThan(0);
+    for (const call of positionLookups) {
+      expect(churchIdsIn(call.args)).toContain(OURS);
+    }
+  });
+
+  it("never links a position without first resolving the member church-scoped", async () => {
+    await exerciseEveryRepository();
+    // With nothing resolvable in the stub, the guards fire and no join row is
+    // ever written.
+    const joinWrites = calls.filter(
+      (c) =>
+        c.model === "teamMemberPosition" &&
+        ["create", "createMany", "deleteMany"].includes(c.op),
+    );
+    expect(joinWrites).toEqual([]);
   });
 
   it("re-checks a referenced service type against the caller's church", async () => {

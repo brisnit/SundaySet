@@ -20,7 +20,7 @@ before it begins. Do not start building M5 unprompted.
 |---|---|
 | Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
 | Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
-| Tests | **170 passing**, 12 files. `npm run verify` green (lint + typecheck + test + build) |
+| Tests | **216 passing**, 13 files. `npm run verify` green (lint + typecheck + test + build) |
 | Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
 | Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
 
@@ -79,7 +79,8 @@ recommendations and a Hot New Song card · read-only Plan, Team, Messages, Setti
 - **Ask SetMeister** is a placeholder page that says so. No AI calls are wired up.
 - **Service create/edit and the setlist builder exist** (Blocks 1–2). **No assignment
   UI yet** — the Team section on `/plan/[serviceId]` is still a deliberate placeholder.
-- **Team pages are read-only.** No scheduling, invitations or emails — that is M6.
+- **Team member create/edit exists** (Block 3). **No scheduling, invitations or emails
+  yet** — assignments are Block 4.
 - **Onboarding screens** do not exist; the seed stands in for them.
 - **CCLI** has a field and an adapter seam, no data and no integration.
 - **Discover** runs on a seeded catalogue; nothing is fetched or scraped.
@@ -769,3 +770,46 @@ song re-checks that *both* the service and the song belong to the caller.
 **Tests** — 25 in `tests/setlist.test.ts` plus 2 new tenancy assertions. The scoping
 guard was verified non-vacuous by temporarily unscoping `setServiceSongKey`, which
 made it fail as intended.
+
+
+---
+
+## 20. Block 3 — team members
+
+`/team/new`, `/team/[teamMemberId]` (a profile, not a form) and `.../edit`.
+
+**Fields** come straight from the existing `TeamMember` model: name, email, phone,
+vocalRange, notes, active, `preferredPerMonth`, `preferredServiceTypeId`, plus
+positions through `TeamMemberPosition`. Positions are read from the `Position`
+table, never hardcoded.
+
+**`userId` stays null.** Being on the roster never creates or requires an account;
+a test asserts this in both create and read.
+
+**Position sync writes only the difference** (add/remove), so existing join rows keep
+their `priority`, which the scheduler will use to break ties. `TeamMemberPosition`
+has no `churchId`, so it is written only after the parent member resolves
+church-scoped, and every position id is re-checked against the church first.
+
+**Permission is `team:manage`** — currently OWNER and ADMIN only. Worship leaders and
+team leaders can view the roster but not edit it. If a worship leader should be able
+to add people, that is a one-line change to the matrix in `lib/auth/roles.ts`, but it
+was not changed unilaterally.
+
+### Bug found and fixed: optional form fields rejected `null`
+
+`formData.get()` returns `null` for a field that is **absent**, and `""` for one that
+is present but empty. Both mean "left blank", but `z.string().optional()` only accepts
+`undefined`, so an absent field failed with `Invalid input: expected string, received
+null` — wrong, and unreadable for the user.
+
+The same pattern existed in the **service and song** schemas, so all three now share
+`lib/validation/form.ts` (`blankToUndefined`, `optionalFormText`, `optionalFormId`).
+Note that in Zod 4 a bare `z.unknown()` still requires the key to be present; coerced
+numeric fields need an explicit `.optional()` before `.transform()`.
+
+Regression tests cover the null case for both the team and service schemas.
+
+> **Testing note.** curl's `-F` interprets metacharacters in values, which made a
+> phone number like `(555) 987-6543` look like an application error. Use
+> `--form-string` when smoke-testing form actions.

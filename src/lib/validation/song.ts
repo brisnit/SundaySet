@@ -1,32 +1,23 @@
 import { z } from "zod";
 
+import { blankToUndefined, optionalFormText } from "./form";
+
 const KEYS = [
   "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
 ] as const;
 
 export const MUSICAL_KEYS = KEYS;
 
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((v) => (v === "" ? undefined : v));
-
-const optionalUrl = z
-  .string()
-  .trim()
-  .optional()
-  .transform((v) => (v === "" ? undefined : v))
-  .refine((v) => v === undefined || /^https?:\/\/\S+$/.test(v), {
-    message: "Enter a full URL starting with http:// or https://",
-  });
+const optionalUrl = optionalFormText(2000).refine(
+  (v) => v === undefined || /^https?:\/\/\S+$/.test(v),
+  { message: "Enter a full URL starting with http:// or https://" },
+);
 
 /** Comma-separated free text → a clean, de-duplicated, lowercase list. */
 const commaList = z
-  .string()
+  .unknown()
   .optional()
+  .transform((raw) => (blankToUndefined(raw) as string | undefined))
   .transform((v) =>
     Array.from(
       new Set(
@@ -40,8 +31,9 @@ const commaList = z
 
 /** Keys stay in their written case — "Bb" is not "bb". */
 const keyList = z
-  .string()
+  .unknown()
   .optional()
+  .transform((raw) => (blankToUndefined(raw) as string | undefined))
   .transform((v) =>
     Array.from(
       new Set(
@@ -55,15 +47,18 @@ const keyList = z
 
 export const songInputSchema = z.object({
   title: z.string().trim().min(1, "Give the song a title").max(200),
-  artist: optionalText(160),
-  ccliNumber: optionalText(32),
-  defaultKey: optionalText(8),
-  churchKey: optionalText(8),
+  artist: optionalFormText(160),
+  ccliNumber: optionalFormText(32),
+  defaultKey: optionalFormText(8),
+  churchKey: optionalFormText(8),
   alternateKeys: keyList,
   bpm: z
-    .union([z.string(), z.number()])
+    .unknown()
     .optional()
-    .transform((v) => (v === "" || v === undefined ? undefined : Number(v)))
+    .transform((v) => {
+      const blank = blankToUndefined(v);
+      return blank === undefined ? undefined : Number(blank);
+    })
     .refine((v) => v === undefined || (Number.isFinite(v) && v > 20 && v < 300), {
       message: "BPM should be between 20 and 300",
     }),
@@ -82,9 +77,9 @@ export const songInputSchema = z.object({
     .enum(["NEW", "LEARNING", "FAMILIAR", "CORE", "RETIRED"])
     .default("NEW"),
   status: z.enum(["ACTIVE", "RETIRED"]).default("ACTIVE"),
-  leadVocalistPreference: optionalText(120),
-  lyrics: optionalText(20000),
-  notes: optionalText(4000),
+  leadVocalistPreference: optionalFormText(120),
+  lyrics: optionalFormText(20000),
+  notes: optionalFormText(4000),
   spotifyUrl: optionalUrl,
   appleMusicUrl: optionalUrl,
   youtubeUrl: optionalUrl,
@@ -111,11 +106,14 @@ export const chartSectionSchema = z.object({
 export type ChartSection = z.infer<typeof chartSectionSchema>;
 
 export const chartInputSchema = z.object({
-  key: optionalText(8),
+  key: optionalFormText(8),
   capo: z
-    .union([z.string(), z.number()])
+    .unknown()
     .optional()
-    .transform((v) => (v === "" || v === undefined ? undefined : Number(v)))
+    .transform((v) => {
+      const blank = blankToUndefined(v);
+      return blank === undefined ? undefined : Number(blank);
+    })
     .refine((v) => v === undefined || (Number.isInteger(v) && v >= 0 && v <= 11), {
       message: "Capo must be between 0 and 11",
     }),

@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { blankToUndefined, optionalFormId, optionalFormText } from "./form";
+
 /**
  * Service input.
  *
@@ -10,14 +12,6 @@ import { z } from "zod";
  */
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
-const optionalText = (max: number) =>
-  z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((v) => (v === "" ? undefined : v));
 
 /** "YYYY-MM-DD" → UTC-midnight Date, matching how @db.Date reads back. */
 export function parseServiceDate(value: string): Date {
@@ -49,39 +43,28 @@ const serviceDate = z
 const time = (message: string) =>
   z.string().trim().regex(TIME, message);
 
-const optionalTime = z
-  .string()
-  .trim()
-  .optional()
-  .transform((v) => (v === "" ? undefined : v))
-  .refine((v) => v === undefined || TIME.test(v), {
-    message: "Use a 24-hour time such as 08:30",
-  });
-
-/** Empty string means "no service type", not an invalid id. */
-const optionalId = z
-  .string()
-  .trim()
-  .optional()
-  .transform((v) => (v === "" ? undefined : v));
+const optionalTime = optionalFormText(5).refine(
+  (v) => v === undefined || TIME.test(v),
+  { message: "Use a 24-hour time such as 08:30" },
+);
 
 export const serviceInputSchema = z.object({
   date: serviceDate,
-  serviceTypeId: optionalId,
+  serviceTypeId: optionalFormId(),
   startTime: time("Use a 24-hour time such as 10:00"),
   callTime: optionalTime,
-  title: optionalText(160),
-  notes: optionalText(4000),
+  title: optionalFormText(160),
+  notes: optionalFormText(4000),
   status: z
     .enum(["DRAFT", "READY", "INVITATIONS_SENT", "CONFIRMED", "COMPLETED"])
     .default("DRAFT"),
 
   // Sermon is a 1:1 relation on Service, so it belongs on the same form. These
   // themes are what the AI planner will match songs against later.
-  sermonTitle: optionalText(200),
-  sermonSeries: optionalText(160),
-  sermonScripture: optionalText(160),
-  sermonDescription: optionalText(4000),
+  sermonTitle: optionalFormText(200),
+  sermonSeries: optionalFormText(160),
+  sermonScripture: optionalFormText(160),
+  sermonDescription: optionalFormText(4000),
 });
 
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
