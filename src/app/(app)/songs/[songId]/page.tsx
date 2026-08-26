@@ -14,6 +14,7 @@ import { NotFoundError } from "@/lib/data/context";
 import { getSongById, getSongUsageHistory } from "@/lib/data/songs";
 import { describeLastPlayed, type UsageStatus } from "@/lib/domain/song-usage";
 import { formatServiceDate, titleCase } from "@/lib/format";
+import { genreLabels } from "@/lib/genres";
 import { storageStatus } from "@/lib/storage";
 
 const USAGE_TONE: Record<UsageStatus, "sage" | "amber" | "clay" | "slate" | "neutral"> = {
@@ -85,6 +86,11 @@ export default async function SongPage({ params }: PageProps<"/songs/[songId]">)
       <div className="mb-6 flex flex-wrap items-center gap-2">
         <Badge tone={USAGE_TONE[song.usage.status]}>{song.usage.label}</Badge>
         {song.status === "RETIRED" ? <Badge tone="slate">Retired</Badge> : null}
+        {genreLabels(song.genres).map((g) => (
+          <Badge key={g} tone="ember">
+            {g}
+          </Badge>
+        ))}
         {song.songTypes.map((t) => (
           <Badge key={t} tone="outline">
             {titleCase(t)}

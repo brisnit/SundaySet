@@ -40,6 +40,7 @@ function parseSong(formData: FormData) {
     bpm: formData.get("bpm"),
     tempoCategory: formData.get("tempoCategory") || undefined,
     songTypes: formData.getAll("songTypes"),
+    genres: formData.getAll("genres"),
     themes: formData.get("themes"),
     difficulty: formData.get("difficulty") || undefined,
     familiarity: formData.get("familiarity") || undefined,

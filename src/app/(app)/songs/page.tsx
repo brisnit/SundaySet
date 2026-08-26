@@ -8,9 +8,10 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { SongFilters } from "@/components/songs/song-filters";
 import { requireChurchContext } from "@/lib/auth/session";
 import { listSongs, songLibraryStats } from "@/lib/data/songs";
-import type { Familiarity, SongStatus, SongType } from "@/generated/prisma/enums";
+import type { Familiarity, Genre, SongStatus, SongType } from "@/generated/prisma/enums";
 import type { SongSort } from "@/lib/data/songs";
 import { describeLastPlayed, type UsageStatus } from "@/lib/domain/song-usage";
+import { genreLabels } from "@/lib/genres";
 import { titleCase } from "@/lib/format";
 
 export const metadata = { title: "Songs" };
@@ -32,6 +33,7 @@ export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
   const params = await searchParams;
 
   const type = one(params.type) as SongType | undefined;
+  const genre = one(params.genre) as Genre | undefined;
   const familiarity = one(params.familiarity) as Familiarity | undefined;
   const status = one(params.status) as SongStatus | undefined;
   const chart = one(params.chart);
@@ -40,6 +42,7 @@ export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
     listSongs(ctx, {
       search: one(params.q),
       songTypes: type ? [type] : undefined,
+      genres: genre ? [genre] : undefined,
       familiarity: familiarity ? [familiarity] : undefined,
       status,
       sort: (one(params.sort) as SongSort | undefined) ?? "title",
@@ -121,9 +124,17 @@ export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
                 <td className="px-4 py-3">
                   <Link href={`/songs/${s.id}`} className="block">
                     <span className="font-medium text-ink">{s.title}</span>
-                    <span className="block text-xs text-ink-muted">
-                      {s.artist}
-                      {s.songTypes.includes("HYMN") ? " · Hymn" : ""}
+                    {/* Genres read as quiet text on the secondary line rather
+                        than more badges — a song with four of them would
+                        otherwise bury the title it belongs to. */}
+                    <span className="block truncate text-xs text-ink-muted">
+                      {[
+                        s.artist,
+                        ...genreLabels(s.genres).slice(0, 2),
+                        s.genres.length > 2 ? `+${s.genres.length - 2}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
                     </span>
                   </Link>
                 </td>

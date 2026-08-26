@@ -39,6 +39,7 @@ export default async function EditSongPage({
           bpm: song.bpm ? String(song.bpm) : "",
           tempoCategory: song.tempoCategory ?? "",
           songTypes: song.songTypes,
+          genres: song.genres,
           themes: song.themes.join(", "),
           difficulty: song.difficulty,
           familiarity: song.familiarity,

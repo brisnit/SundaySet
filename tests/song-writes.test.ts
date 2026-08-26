@@ -35,6 +35,7 @@ const input = (over: Partial<SongInput> = {}): SongInput => ({
   bpm: 72,
   tempoCategory: "MEDIUM",
   songTypes: ["MID_TEMPO"],
+  genres: [],
   themes: ["hope"],
   difficulty: "MODERATE",
   familiarity: "NEW",

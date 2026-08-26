@@ -195,6 +195,9 @@ model Song {
   bpm                    Int?
   tempoCategory          TempoCategory?
   songTypes              SongType[]
+  /// Broad musical genres. A song may belong to several — "Worship + Gospel",
+  /// "Pop + Rock" — so this is a list, not a single primary genre.
+  genres                 Genre[]
   themes                 String[]
   difficulty             Difficulty     @default(MODERATE)
   leadVocalistPreference String?
@@ -678,6 +681,30 @@ enum TempoCategory {
   FAST
   MEDIUM
   SLOW
+}
+
+/// Broad musical genres, independent of the church-specific occasion values in
+/// SongType. Deliberately wide: SetMeister builds sets for any kind of music.
+enum Genre {
+  WORSHIP
+  GOSPEL
+  TRADITIONAL
+  POP
+  ROCK
+  ALTERNATIVE
+  INDIE
+  RNB
+  SOUL
+  FUNK
+  HIP_HOP
+  COUNTRY
+  FOLK
+  ACOUSTIC
+  JAZZ
+  BLUES
+  ELECTRONIC
+  CLASSICAL
+  OTHER
 }
 
 enum SongType {

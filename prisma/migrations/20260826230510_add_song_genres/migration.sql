@@ -1,0 +1,5 @@
+-- CreateEnum
+CREATE TYPE "Genre" AS ENUM ('WORSHIP', 'GOSPEL', 'TRADITIONAL', 'POP', 'ROCK', 'ALTERNATIVE', 'INDIE', 'RNB', 'SOUL', 'FUNK', 'HIP_HOP', 'COUNTRY', 'FOLK', 'ACOUSTIC', 'JAZZ', 'BLUES', 'ELECTRONIC', 'CLASSICAL', 'OTHER');
+
+-- AlterTable
+ALTER TABLE "Song" ADD COLUMN     "genres" "Genre"[];

@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/field";
 import type { FormState } from "@/app/(app)/songs/actions";
 import { titleCase } from "@/lib/format";
+import { GENRES } from "@/lib/genres";
 
 /**
  * Song types offered in the product.
@@ -34,6 +35,7 @@ export type SongFormValues = {
   bpm: string;
   tempoCategory: string;
   songTypes: string[];
+  genres: string[];
   themes: string;
   difficulty: string;
   familiarity: string;
@@ -48,7 +50,8 @@ export type SongFormValues = {
 
 export const EMPTY_SONG: SongFormValues = {
   title: "", artist: "", ccliNumber: "", defaultKey: "", churchKey: "",
-  alternateKeys: "", bpm: "", tempoCategory: "", songTypes: [], themes: "",
+  alternateKeys: "", bpm: "", tempoCategory: "", songTypes: [], genres: [],
+  themes: "",
   difficulty: "MODERATE", familiarity: "NEW", status: "ACTIVE",
   leadVocalistPreference: "", lyrics: "", notes: "",
   spotifyUrl: "", appleMusicUrl: "", youtubeUrl: "",
@@ -164,6 +167,13 @@ export function SongForm({
           <CardTitle>How SetMeister should use it</CardTitle>
         </CardHeader>
         <CardBody className="grid gap-5">
+          <CheckboxGroup
+            legend="Genre"
+            name="genres"
+            selected={values.genres}
+            options={GENRES.map((g) => ({ value: g.value, label: g.label }))}
+          />
+
           <CheckboxGroup
             legend="Song type"
             name="songTypes"

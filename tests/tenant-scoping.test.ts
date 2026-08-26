@@ -168,6 +168,7 @@ const SONG_INPUT: Parameters<typeof createSong>[1] = {
   bpm: undefined,
   tempoCategory: undefined,
   songTypes: [],
+  genres: [],
   themes: [],
   difficulty: "MODERATE",
   familiarity: "NEW",

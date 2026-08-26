@@ -2,7 +2,7 @@ import "server-only";
 
 import { cache } from "react";
 
-import type { Familiarity, SongStatus, SongType } from "@/generated/prisma/enums";
+import type { Familiarity, Genre, SongStatus, SongType } from "@/generated/prisma/enums";
 import type { ChartInput, SongInput } from "@/lib/validation/song";
 import { db } from "@/lib/db";
 import { classifyUsage, type UsageVerdict } from "@/lib/domain/song-usage";
@@ -14,6 +14,8 @@ export type SongSort = "title" | "artist" | "recently-played" | "least-played" |
 export type SongFilters = {
   search?: string;
   songTypes?: SongType[];
+  /** Matches a song carrying ANY of these — genres are not exclusive. */
+  genres?: Genre[];
   familiarity?: Familiarity[];
   status?: SongStatus;
   sort?: SongSort;
@@ -27,6 +29,7 @@ export type SongListItem = {
   defaultKey: string | null;
   bpm: number | null;
   songTypes: SongType[];
+  genres: Genre[];
   themes: string[];
   familiarity: Familiarity;
   status: SongStatus;
@@ -74,13 +77,16 @@ export async function listSongs(
   filters: SongFilters = {},
   today: Date = new Date(),
 ): Promise<SongListItem[]> {
-  const { search, songTypes, familiarity, status, sort = "title" } = filters;
+  const { search, songTypes, genres, familiarity, status, sort = "title" } = filters;
 
   const songs = await db.song.findMany({
     where: {
       ...scope(ctx),
       ...(status ? { status } : {}),
       ...(songTypes?.length ? { songTypes: { hasSome: songTypes } } : {}),
+      // hasSome, so picking Rock finds "Worship + Rock" too. Combined with the
+      // other filters by AND, which is what "narrow it down" should mean.
+      ...(genres?.length ? { genres: { hasSome: genres } } : {}),
       ...(familiarity?.length ? { familiarity: { in: familiarity } } : {}),
       ...(search
         ? {
@@ -118,6 +124,7 @@ export async function listSongs(
       defaultKey: s.defaultKey,
       bpm: s.bpm,
       songTypes: s.songTypes,
+      genres: s.genres,
       themes: s.themes,
       familiarity: s.familiarity,
       status: s.status,

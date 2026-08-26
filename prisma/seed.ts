@@ -180,6 +180,7 @@ async function main() {
         bpm: s.bpm,
         tempoCategory: s.tempo,
         songTypes: s.types,
+        genres: s.genres,
         themes: s.themes,
         difficulty: s.difficulty,
         familiarity: s.familiarity,

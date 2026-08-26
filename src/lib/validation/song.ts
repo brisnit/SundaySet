@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { blankToUndefined, optionalFormText } from "./form";
+import { GENRE_VALUES } from "@/lib/genres";
 
 const KEYS = [
   "C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B",
@@ -71,6 +72,8 @@ export const songInputSchema = z.object({
       ]),
     )
     .default([]),
+  /** Optional and multiple: a song can be Worship + Gospel. */
+  genres: z.array(z.enum(GENRE_VALUES)).default([]),
   themes: commaList,
   difficulty: z.enum(["SIMPLE", "MODERATE", "ADVANCED"]).default("MODERATE"),
   familiarity: z

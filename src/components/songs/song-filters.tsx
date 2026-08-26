@@ -6,6 +6,7 @@ import { Search, X } from "lucide-react";
 
 import { Select } from "@/components/ui/field";
 import { titleCase } from "@/lib/format";
+import { GENRES } from "@/lib/genres";
 
 /**
  * Song types offered in the product.
@@ -41,7 +42,11 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
   };
 
   const active =
-    params.get("q") || params.get("type") || params.get("familiarity") || params.get("status");
+    params.get("q") ||
+    params.get("type") ||
+    params.get("genre") ||
+    params.get("familiarity") ||
+    params.get("status");
 
   return (
     <div className="mb-4 grid gap-3">
@@ -74,6 +79,19 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
           <option value="">All types</option>
           {SONG_TYPES.map((t) => (
             <option key={t} value={t}>{titleCase(t)}</option>
+          ))}
+        </Select>
+
+        <label htmlFor="song-genre" className="sr-only">Genre</label>
+        <Select
+          id="song-genre"
+          className="w-auto"
+          value={params.get("genre") ?? ""}
+          onChange={(e) => set("genre", e.target.value)}
+        >
+          <option value="">All genres</option>
+          {GENRES.map((g) => (
+            <option key={g.value} value={g.value}>{g.label}</option>
           ))}
         </Select>
 
