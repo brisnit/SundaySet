@@ -89,6 +89,14 @@ const {
   moveServiceSong,
   listAddableSongs,
 } = await import("@/lib/data/setlist");
+const {
+  getServiceTeam,
+  listCandidatePool,
+  listCandidates,
+  assignMember,
+  reassignMember,
+  removeAssignment,
+} = await import("@/lib/data/assignments");
 const { scope, scopedById } = await import("@/lib/data/context");
 type ChurchContext = import("@/lib/data/context").ChurchContext;
 
@@ -254,6 +262,20 @@ async function exerciseEveryRepository() {
   await ignoreNotFound(() =>
     setTeamMemberActive(ctx, "member_from_another_church", false),
   );
+  await ignoreNotFound(() => getServiceTeam(ctx, "service_from_another_church"));
+  await ignoreNotFound(() => listCandidatePool(ctx, "service_from_another_church"));
+  await ignoreNotFound(() =>
+    listCandidates(ctx, "service_from_another_church", "position_x"),
+  );
+  await ignoreNotFound(() =>
+    assignMember(ctx, "service_from_another_church", "member_x", "position_x"),
+  );
+  await ignoreNotFound(() =>
+    reassignMember(ctx, "assignment_from_another_church", "member_x"),
+  );
+  await ignoreNotFound(() =>
+    removeAssignment(ctx, "assignment_from_another_church"),
+  );
   // Position ids must be re-checked against the church before being linked.
   await ignoreNotFound(() =>
     createTeamMember(ctx, {
@@ -317,6 +339,25 @@ describe("repository tenant scoping", () => {
     for (const m of mutations) {
       expect(churchIdsIn(m.args)).toContain(OURS);
     }
+  });
+
+  it("church-scopes every assignment query and mutation", async () => {
+    await exerciseEveryRepository();
+    // Assignment has no churchId; it reaches tenancy through
+    // `service: { churchId }` on every read and write.
+    const ops = calls.filter((c) => c.model === "assignment");
+    expect(ops.length).toBeGreaterThan(0);
+    for (const op of ops) {
+      expect(churchIdsIn(op.args)).toContain(OURS);
+    }
+  });
+
+  it("never creates an assignment it could not resolve church-scoped", async () => {
+    await exerciseEveryRepository();
+    const creates = calls.filter(
+      (c) => c.model === "assignment" && ["create", "createMany"].includes(c.op),
+    );
+    expect(creates).toEqual([]);
   });
 
   it("re-checks referenced positions against the caller's church", async () => {

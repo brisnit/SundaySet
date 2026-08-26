@@ -20,7 +20,7 @@ before it begins. Do not start building M5 unprompted.
 |---|---|
 | Complete | **M1 Foundation · M2 Data & auth · M3 Seed · M4 Songs** |
 | Latest commit | see `git log -1` — M4 was `1d7db39`, plus a housekeeping commit after it |
-| Tests | **216 passing**, 13 files. `npm run verify` green (lint + typecheck + test + build) |
+| Tests | **273 passing**, 15 files. `npm run verify` green (lint + typecheck + test + build) |
 | Repository | `~/Developer/SetMeister` — **moved out of iCloud-synced `~/Desktop`** |
 | Remote | `https://github.com/brisnit/SundaySet.git` (name intentionally not changed) |
 
@@ -79,8 +79,8 @@ recommendations and a Hot New Song card · read-only Plan, Team, Messages, Setti
 - **Ask SetMeister** is a placeholder page that says so. No AI calls are wired up.
 - **Service create/edit and the setlist builder exist** (Blocks 1–2). **No assignment
   UI yet** — the Team section on `/plan/[serviceId]` is still a deliberate placeholder.
-- **Team member create/edit exists** (Block 3). **No scheduling, invitations or emails
-  yet** — assignments are Block 4.
+- **Team assignments exist** (Block 4). **No invitation tokens, `/r/[token]` or email
+  yet** — that is Block 5.
 - **Onboarding screens** do not exist; the seed stands in for them.
 - **CCLI** has a field and an adapter seam, no data and no integration.
 - **Discover** runs on a seeded catalogue; nothing is fetched or scraped.
@@ -813,3 +813,49 @@ Regression tests cover the null case for both the team and service schemas.
 > **Testing note.** curl's `-F` interprets metacharacters in values, which made a
 > phone number like `(555) 987-6543` look like an application error. Use
 > `--form-string` when smoke-testing form actions.
+
+
+---
+
+## 21. Block 4 — team assignments
+
+Assign, replace and remove people per position on `/plan/[serviceId]`.
+
+### Schema finding: positions are not tied to services
+`Position` relates only to `Church`, `TeamMemberPosition` and `Assignment`. There is
+**no model for "positions required for this service or service type"**. As
+pre-authorised, the scheduler lists the church's own active positions rather than
+inventing a `ServiceTypePosition` join. If per-service-type templates are wanted
+later ("Sunday needs 8 roles, Wednesday needs 3"), that is a new model and a
+migration — flagged, not built.
+
+### What the schema does allow
+`@@unique([serviceId, teamMemberId, positionId])` means a person **can** hold several
+positions in one service, and a position **can** hold several people. Only the exact
+triple is forbidden. Both are covered by tests.
+
+### Conflicts warn, never veto
+`lib/domain/scheduling.ts` is pure and returns advisory conflicts:
+`BLOCKED_OUT`, `DECLINED_THIS_SERVICE`, `INACTIVE` (severity *conflict*);
+`ALREADY_IN_SERVICE`, `NOT_QUALIFIED`, `OVER_COMMITTED` (severity *caution*).
+
+Nobody is ever removed from the candidate list for a conflict — a blocked-out person
+appears with "Unavailable Sep 5 – Sep 12 (Holiday)" beside their name. Hiding them
+would leave the leader wondering where they went. Conflicts are **recomputed on read**,
+so a blockout added after the assignment still surfaces on the service page.
+
+The only hard constraint is the database one, surfaced as `DuplicateAssignmentError`.
+
+### Performance
+The page ships one candidate pool and the picker evaluates conflicts per position in
+the browser using the same `findConflicts`. Opening the picker for any of 13 positions
+costs no round trip, so a whole Sunday can be staffed without waiting.
+
+### Status
+New assignments are created at the schema default **`PENDING`**, surfaced as "Not
+invited yet". Block 5 moves them to `INVITED`. Reassigning resets to `PENDING` and
+clears `respondedAt`, because an acceptance belonged to the person being replaced.
+
+### Permission
+Gated on **`team:schedule`** (OWNER, ADMIN, WORSHIP_LEADER, TEAM_LEADER) — distinct
+from `team:manage`, which edits the roster and is OWNER/ADMIN only.

@@ -5,6 +5,7 @@ import { CalendarDays, ListMusic, Pencil, Users } from "lucide-react";
 import { PageHeader } from "@/components/app/shell";
 import { DeleteServiceButton } from "@/components/services/service-actions";
 import { SetlistBuilder } from "@/components/services/setlist-builder";
+import { TeamBuilder } from "@/components/services/team-builder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { requireChurchContext } from "@/lib/auth/session";
 import { NotFoundError } from "@/lib/data/context";
 import { getServiceById } from "@/lib/data/services";
 import { getSetlist, listAddableSongs } from "@/lib/data/setlist";
+import { getServiceTeam, listCandidatePool } from "@/lib/data/assignments";
 import { formatServiceDate, formatTime, titleCase } from "@/lib/format";
 
 type Service = Awaited<ReturnType<typeof getServiceById>>;
@@ -36,48 +38,6 @@ export async function generateMetadata({
   };
 }
 
-/**
- * The service workspace.
- *
- * Setlist and Team are placeholders in this block — the builders arrive next.
- * They are laid out now so the page's final shape is settled before the
- * interactive pieces land in it.
- */
-function PlaceholderSection({
-  icon,
-  title,
-  description,
-  count,
-  noun,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  count: number;
-  noun: string;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex items-center gap-2">
-        {icon}
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardBody>
-        <div className="rounded-lg border border-dashed border-line-strong bg-sunken/50 px-5 py-8 text-center">
-          <p className="text-sm text-ink-muted">{description}</p>
-          {count > 0 ? (
-            <p className="mt-2 text-xs text-ink-subtle">
-              This service already has {count} {noun}
-              {count === 1 ? "" : "s"} from the seed data. They will appear here
-              once this section is built.
-            </p>
-          ) : null}
-        </div>
-      </CardBody>
-    </Card>
-  );
-}
-
 export default async function ServiceDetailPage({
   params,
 }: PageProps<"/plan/[serviceId]">) {
@@ -91,10 +51,15 @@ export default async function ServiceDetailPage({
 
   const editable = can(ctx.role, "services:manage");
   const canEditSetlist = can(ctx.role, "songs:manage");
+  const canSchedule = can(ctx.role, "team:schedule");
 
-  const [setlist, addable] = await Promise.all([
+  const [setlist, addable, teamSlots, pool] = await Promise.all([
     getSetlist(ctx, serviceId),
     canEditSetlist ? listAddableSongs(ctx, serviceId) : Promise.resolve([]),
+    getServiceTeam(ctx, serviceId),
+    canSchedule
+      ? listCandidatePool(ctx, serviceId, { includeInactive: true })
+      : Promise.resolve([]),
   ]);
   const heading =
     service.title ?? service.sermon?.title ?? formatServiceDate(service.date);
@@ -165,13 +130,35 @@ export default async function ServiceDetailPage({
             </CardBody>
           </Card>
 
-          <PlaceholderSection
-            icon={<Users aria-hidden className="size-4 text-ink-subtle" />}
-            title="Team"
-            description="Assigning musicians and tech comes after the setlist."
-            count={service.assignments.length}
-            noun="assignment"
-          />
+          <Card>
+            <CardHeader className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Users aria-hidden className="size-4 text-ink-subtle" />
+                <CardTitle>Team</CardTitle>
+              </div>
+              {service.assignments.length > 0 ? (
+                <span className="text-xs text-ink-subtle">
+                  {service.assignments.length} scheduled
+                </span>
+              ) : null}
+            </CardHeader>
+            <CardBody>
+              <TeamBuilder
+                serviceId={service.id}
+                serviceDate={service.date.toISOString()}
+                canEdit={canSchedule}
+                slots={teamSlots}
+                pool={pool.map((m) => ({
+                  ...m,
+                  blockouts: m.blockouts.map((b) => ({
+                    startDate: b.startDate.toISOString(),
+                    endDate: b.endDate.toISOString(),
+                    note: b.note,
+                  })),
+                }))}
+              />
+            </CardBody>
+          </Card>
         </div>
 
         <div className="lg:col-span-2 grid gap-5">
