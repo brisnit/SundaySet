@@ -57,3 +57,14 @@ export function titleCase(value: string): string {
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 }
+
+/**
+ * What to call a set in lists and headings.
+ *
+ * Sets used to fall back to the sermon title when unnamed. Sermons are gone
+ * from the product, so an unnamed set is named by its date — which is what a
+ * musician recognises it by anyway.
+ */
+export function setName(set: { title?: string | null; date: Date }): string {
+  return set.title?.trim() || formatServiceDate(set.date, { weekday: false });
+}

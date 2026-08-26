@@ -2,7 +2,7 @@ import "server-only";
 
 import type { ServiceStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
-import { hasSermonContent, type ServiceInput } from "@/lib/validation/service";
+import type { ServiceInput } from "@/lib/validation/service";
 
 import { NotFoundError, scope, scopedById, type ChurchContext } from "./context";
 
@@ -127,14 +127,6 @@ async function assertServiceTypeOwned(ctx: ChurchContext, serviceTypeId?: string
   if (!owned) throw new NotFoundError("Service type");
 }
 
-function sermonFields(input: ServiceInput) {
-  return {
-    title: input.sermonTitle ?? null,
-    series: input.sermonSeries ?? null,
-    scripture: input.sermonScripture ?? null,
-    description: input.sermonDescription ?? null,
-  };
-}
 
 function serviceFields(input: ServiceInput) {
   return {
@@ -156,9 +148,6 @@ export async function createService(ctx: ChurchContext, input: ServiceInput) {
       ...serviceFields(input),
       churchId: ctx.churchId,
       createdById: ctx.userId,
-      ...(hasSermonContent(input)
-        ? { sermon: { create: sermonFields(input) } }
-        : {}),
     },
   });
 }
@@ -178,17 +167,8 @@ export async function updateService(
   // from it not existing, which is the point.
   if (count === 0) throw new NotFoundError("Service");
 
-  if (hasSermonContent(input)) {
-    await db.sermon.upsert({
-      where: { serviceId: id },
-      create: { serviceId: id, ...sermonFields(input) },
-      update: sermonFields(input),
-    });
-  } else {
-    // Clearing every sermon field removes the record rather than leaving an
-    // empty one behind for the AI planner to read as a real theme.
-    await db.sermon.deleteMany({ where: { serviceId: id } });
-  }
+  // Sermon is dormant: removed from the product, but existing rows are left
+  // untouched rather than silently deleted on every edit.
 }
 
 export async function deleteService(ctx: ChurchContext, id: string) {

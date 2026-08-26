@@ -136,7 +136,7 @@ export function TeamMemberForm({
 
           {positions.length === 0 ? (
             <p className="text-sm text-ink-muted">
-              No positions set up for your church yet.
+              No positions set up yet.
             </p>
           ) : (
             Object.entries(byCategory).map(([category, options]) => (
@@ -189,7 +189,7 @@ export function TeamMemberForm({
           <Field
             label="Times per month"
             htmlFor="preferredPerMonth"
-            hint="How often they'd like to serve. 0 means no preference."
+            hint="How often they'd like to play. 0 means no preference."
             error={err("preferredPerMonth")}
           >
             <Input
@@ -203,7 +203,7 @@ export function TeamMemberForm({
           </Field>
 
           <Field
-            label="Preferred service"
+            label="Preferred slot"
             htmlFor="preferredServiceTypeId"
             hint="Optional."
             error={err("preferredServiceTypeId")}

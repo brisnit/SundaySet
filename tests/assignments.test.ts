@@ -36,10 +36,6 @@ const serviceInput = (date = SERVICE_DAY): ServiceInput => ({
   title: "Assign Test",
   notes: undefined,
   status: "DRAFT",
-  sermonTitle: undefined,
-  sermonSeries: undefined,
-  sermonScripture: undefined,
-  sermonDescription: undefined,
 });
 
 async function makeChurch(slug: string) {

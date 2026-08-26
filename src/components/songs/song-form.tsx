@@ -15,10 +15,14 @@ import {
 import type { FormState } from "@/app/(app)/songs/actions";
 import { titleCase } from "@/lib/format";
 
-const SONG_TYPES = [
-  "UPBEAT", "MID_TEMPO", "REFLECTIVE", "HYMN", "COMMUNION", "EASTER",
-  "CHRISTMAS", "ADVENT", "RESPONSE", "BAPTISM", "PRAYER", "OFFERING",
-];
+/**
+ * Song types offered in the product.
+ *
+ * The SongType enum still holds church-specific occasions (COMMUNION, ADVENT,
+ * BAPTISM, OFFERING...) so existing data stays valid and no destructive
+ * migration is needed — they are simply no longer offered here.
+ */
+const SONG_TYPES = ["UPBEAT", "MID_TEMPO", "REFLECTIVE", "RESPONSE", "PRAYER"];
 
 export type SongFormValues = {
   title: string;
@@ -108,7 +112,7 @@ export function SongForm({
           <Field
             label="Your key"
             htmlFor="churchKey"
-            hint="What your team actually plays"
+            hint="What your band actually plays"
             error={err("churchKey")}
           >
             <Input id="churchKey" name="churchKey" defaultValue={values.churchKey} placeholder="D" />
@@ -176,9 +180,9 @@ export function SongForm({
           </Field>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field
-              label="Congregational familiarity"
+              label="How well you know it"
               htmlFor="familiarity"
-              hint="Stops the AI stacking a set with songs nobody knows"
+              hint="Stops a set filling up with songs nobody knows"
               error={err("familiarity")}
             >
               <Select id="familiarity" name="familiarity" defaultValue={values.familiarity}>

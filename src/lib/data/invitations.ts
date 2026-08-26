@@ -184,7 +184,6 @@ export async function resolveInvitation(token: unknown): Promise<PublicInvitatio
       callTime: true,
       church: { select: { name: true } },
       serviceType: { select: { name: true } },
-      sermon: { select: { title: true } },
       songs: {
         orderBy: { position: "asc" },
         select: {
@@ -223,7 +222,7 @@ export async function resolveInvitation(token: unknown): Promise<PublicInvitatio
     memberName: teamMember.name,
     churchName: service.church.name,
     serviceId: service.id,
-    serviceTitle: service.title ?? service.sermon?.title ?? "Sunday service",
+    serviceTitle: service.title ?? "Your set",
     serviceTypeName: service.serviceType?.name ?? null,
     date: service.date,
     startTime: service.startTime,

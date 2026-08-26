@@ -1,81 +1,57 @@
 import "server-only";
 
-import { db } from "@/lib/db";
-import { openPositions } from "@/lib/domain/roster";
+import { listRecentServices, listUpcomingServices } from "./services";
+import { type ChurchContext } from "./context";
 
-import { scope, type ChurchContext } from "./context";
-import { getNextService, listUpcomingServices, todayUtc } from "./services";
-import { songLibraryStats } from "./songs";
+/**
+ * Home is about sets, not statistics.
+ *
+ * The old dashboard counted things across the whole workspace — songs in the
+ * library, invitations outstanding, charts missing. Those read as an admin
+ * report rather than a tool for making the next set, and every one of them cost
+ * a query. What is left is the two lists Home actually shows, and the warnings
+ * that belong to a specific set travel with that set's row.
+ */
+export type SetWarning = { label: string; tone: "clay" | "amber" };
 
-export type Alert = {
-  tone: "clay" | "amber" | "slate";
-  message: string;
-  href: string;
-};
+export type SetRow = Awaited<ReturnType<typeof listUpcomingServices>>[number];
 
-/** Everything Home needs to answer "what's happening Sunday?" in one place. */
-export async function getDashboard(ctx: ChurchContext, now: Date = new Date()) {
-  const [nextService, upcoming, library, awaitingCount, missingChartSongs] =
-    await Promise.all([
-      getNextService(ctx, now),
-      listUpcomingServices(ctx, { take: 4, skipFirst: true }, now),
-      songLibraryStats(ctx),
-      db.assignment.count({
-        where: {
-          service: { ...scope(ctx), date: { gte: todayUtc(now) } },
-          status: "INVITED",
-        },
-      }),
-      // Only songs actually scheduled soon. A count across the whole library
-      // is technically true but not actionable — nobody chases a chart for a
-      // song they are not about to play.
-      db.song.findMany({
-        where: {
-          ...scope(ctx),
-          chart: { is: null },
-          serviceSongs: {
-            some: { service: { ...scope(ctx), date: { gte: todayUtc(now) } } },
-          },
-        },
-        select: { id: true, title: true },
-      }),
-    ]);
+/** Warnings that belong to one set, shown on its own row. */
+export function warningsFor(set: SetRow): SetWarning[] {
+  const out: SetWarning[] = [];
 
-  const open = nextService
-    ? openPositions(nextService.assignments.map((a) => a.position.name))
-    : [];
-
-  const alerts: Alert[] = [];
-  if (open.length > 0) {
-    alerts.push({
-      tone: "clay",
-      message:
-        open.length === 1
-          ? `1 position needs someone — ${open[0]}`
-          : `${open.length} positions need someone`,
-      href: nextService ? `/plan/${nextService.id}` : "/plan",
-    });
+  const unfilled = set.assignments.length === 0;
+  if (unfilled) {
+    out.push({ label: "No one scheduled", tone: "clay" });
   }
-  if (awaitingCount > 0) {
-    alerts.push({
+
+  const awaiting = set.assignments.filter((a) => a.status === "INVITED").length;
+  if (awaiting > 0) {
+    out.push({
+      label: `${awaiting} awaiting reply`,
       tone: "amber",
-      message:
-        awaitingCount === 1
-          ? "1 invitation awaiting response"
-          : `${awaitingCount} invitations awaiting response`,
-      href: "/messages",
-    });
-  }
-  if (missingChartSongs.length > 0) {
-    alerts.push({
-      tone: "slate",
-      message:
-        missingChartSongs.length === 1
-          ? `1 chart is missing — ${missingChartSongs[0].title}`
-          : `${missingChartSongs.length} charts are missing for upcoming songs`,
-      href: "/songs?chart=missing",
     });
   }
 
-  return { nextService, upcoming, library, alerts, openPositions: open };
+  const declined = set.assignments.filter((a) => a.status === "DECLINED").length;
+  if (declined > 0) {
+    out.push({
+      label: declined === 1 ? "1 declined" : `${declined} declined`,
+      tone: "clay",
+    });
+  }
+
+  if (set.songs.length === 0) {
+    out.push({ label: "No songs yet", tone: "amber" });
+  }
+
+  return out;
+}
+
+export async function getHome(ctx: ChurchContext, now: Date = new Date()) {
+  const [upcoming, past] = await Promise.all([
+    listUpcomingServices(ctx, { take: 12 }, now),
+    listRecentServices(ctx, { take: 8 }, now),
+  ]);
+  return { upcoming, past };
 }

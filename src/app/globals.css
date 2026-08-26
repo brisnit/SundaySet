@@ -94,6 +94,16 @@
 @layer base {
   html {
     color-scheme: light dark;
+    /*
+     * Reserve the scrollbar track on every page.
+     *
+     * Content is centred with mx-auto, so without this a short page (no
+     * scrollbar) and a long page (scrollbar) have different viewport widths,
+     * and every navigation between them shifts the whole layout sideways —
+     * including the fixed bottom nav. This is the single cause of the
+     * horizontal jumping between sections.
+     */
+    scrollbar-gutter: stable;
   }
 
   body {

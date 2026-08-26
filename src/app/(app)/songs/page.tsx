@@ -57,7 +57,7 @@ export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
         <PageHeader title="Songs" />
         <EmptyState
           title="No songs yet"
-          description="Your song library teaches SetMeister what your church actually sings. Everything the AI suggests comes from here."
+          description="Your library is what SetMeister builds sets from. Everything it suggests comes from here."
         >
           <Button asChild>
             <Link href="/songs/new">Add songs</Link>

@@ -7,7 +7,7 @@ import { toDateInputValue } from "@/lib/validation/service";
 
 import { createServiceAction } from "../actions";
 
-export const metadata = { title: "New service" };
+export const metadata = { title: "Create a Set" };
 
 /** The next occurrence of the service type's weekday, so the date starts sensibly. */
 function nextDayOfWeek(dayOfWeek: number, from: Date): Date {
@@ -28,13 +28,13 @@ export default async function NewServicePage() {
   return (
     <>
       <PageHeader
-        title="New service"
-        subtitle="Set the date and time. The setlist and team come next."
+        title="Create a Set"
+        subtitle="Start with when. Songs and team come next."
       />
       <ServiceForm
         action={createServiceAction}
         serviceTypes={serviceTypes}
-        submitLabel="Create service"
+        submitLabel="Create set"
         cancelHref="/plan"
         showStatus={false}
         values={{
@@ -45,10 +45,6 @@ export default async function NewServicePage() {
           title: "",
           notes: "",
           status: "DRAFT",
-          sermonTitle: "",
-          sermonSeries: "",
-          sermonScripture: "",
-          sermonDescription: "",
         }}
       />
     </>

@@ -19,7 +19,7 @@ export default async function NewTeamMemberPage() {
     <>
       <PageHeader
         title="Add someone to the team"
-        subtitle="No account needed — they'll be able to respond to invitations by link."
+        subtitle="No account needed — they respond to invitations by link."
       />
       <TeamMemberForm
         action={createTeamMemberAction}

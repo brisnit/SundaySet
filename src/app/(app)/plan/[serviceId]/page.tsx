@@ -16,7 +16,7 @@ import { getServiceById } from "@/lib/data/services";
 import { getSetlist, listAddableSongs } from "@/lib/data/setlist";
 import { getServiceTeam, listCandidatePool } from "@/lib/data/assignments";
 import { getInvitationStates } from "@/lib/data/invitations";
-import { formatServiceDate, formatTime, titleCase } from "@/lib/format";
+import { formatServiceDate, formatTime, setName, titleCase } from "@/lib/format";
 
 type Service = Awaited<ReturnType<typeof getServiceById>>;
 
@@ -34,7 +34,7 @@ export async function generateMetadata({
   const service = await getServiceById(ctx, serviceId).catch(() => null);
   return {
     title: service
-      ? (service.title ?? service.sermon?.title ?? formatServiceDate(service.date))
+      ? (setName(service))
       : "Service",
   };
 }
@@ -65,7 +65,7 @@ export default async function ServiceDetailPage({
     getInvitationStates(ctx, serviceId),
   ]);
   const heading =
-    service.title ?? service.sermon?.title ?? formatServiceDate(service.date);
+    setName(service);
 
   const row = (label: string, value: React.ReactNode) => (
     <div className="flex items-baseline justify-between gap-4 border-b border-line py-2.5 last:border-0">
@@ -172,57 +172,20 @@ export default async function ServiceDetailPage({
           <Card>
             <CardHeader className="flex items-center gap-2">
               <CalendarDays aria-hidden className="size-4 text-ink-subtle" />
-              <CardTitle>Service details</CardTitle>
+              <CardTitle>Details</CardTitle>
             </CardHeader>
             <CardBody>
               <dl>
                 {row("Date", formatServiceDate(service.date, { year: true }))}
                 {row("Starts", formatTime(service.startTime))}
                 {row("Call time", service.callTime ? formatTime(service.callTime) : "Not set")}
-                {row("Service", service.serviceType?.name ?? "Not set")}
+                {row("Slot", service.serviceType?.name ?? "Not set")}
                 {row("Status", titleCase(service.status))}
                 {service.title ? row("Name", service.title) : null}
               </dl>
             </CardBody>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Sermon</CardTitle>
-            </CardHeader>
-            <CardBody>
-              {service.sermon ? (
-                <dl>
-                  {service.sermon.title ? row("Title", service.sermon.title) : null}
-                  {service.sermon.series ? row("Series", service.sermon.series) : null}
-                  {service.sermon.scripture
-                    ? row("Scripture", service.sermon.scripture)
-                    : null}
-                  {service.sermon.description ? (
-                    <div className="pt-3">
-                      <dt className="mb-1 text-sm text-ink-muted">Description</dt>
-                      <dd className="text-sm leading-relaxed whitespace-pre-wrap text-ink">
-                        {service.sermon.description}
-                      </dd>
-                    </div>
-                  ) : null}
-                </dl>
-              ) : (
-                <p className="text-sm text-ink-muted">
-                  No sermon details yet.{" "}
-                  {editable ? (
-                    <Link
-                      href={`/plan/${service.id}/edit`}
-                      className="text-ember hover:underline"
-                    >
-                      Add them
-                    </Link>
-                  ) : null}{" "}
-                  so song suggestions can match the theme.
-                </p>
-              )}
-            </CardBody>
-          </Card>
 
           {service.notes ? (
             <Card>

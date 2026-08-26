@@ -11,7 +11,7 @@ import { toDateInputValue } from "@/lib/validation/service";
 
 import { updateServiceAction } from "../../actions";
 
-export const metadata = { title: "Edit service" };
+export const metadata = { title: "Edit set" };
 
 export default async function EditServicePage({
   params,
@@ -30,7 +30,7 @@ export default async function EditServicePage({
   return (
     <>
       <PageHeader
-        title="Edit service"
+        title="Edit set"
         subtitle={formatServiceDate(service.date, { year: true })}
       />
       <ServiceForm
@@ -47,10 +47,6 @@ export default async function EditServicePage({
           title: service.title ?? "",
           notes: service.notes ?? "",
           status: service.status,
-          sermonTitle: service.sermon?.title ?? "",
-          sermonSeries: service.sermon?.series ?? "",
-          sermonScripture: service.sermon?.scripture ?? "",
-          sermonDescription: service.sermon?.description ?? "",
         }}
       />
     </>

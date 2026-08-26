@@ -50,7 +50,7 @@ export default async function DiscoverPage() {
     <>
       <PageHeader
         title="Discover"
-        subtitle="Suggestions scored against what your church already sings"
+        subtitle="Scored against what you already play"
         actions={
           <Button asChild variant="secondary">
             <Link href="/songs">Back to my songs</Link>
@@ -83,7 +83,7 @@ export default async function DiscoverPage() {
                 <p className="mt-3 font-display text-3xl text-ember">
                   {hot.score}%
                   <span className="ml-2 font-sans text-sm text-ink-muted">
-                    match for your church
+                    match for your library
                   </span>
                 </p>
 

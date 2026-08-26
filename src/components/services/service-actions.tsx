@@ -23,7 +23,7 @@ export function DeleteServiceButton({
       onClick={() => {
         if (
           !confirm(
-            `Delete ${label}? Its setlist and any team assignments go with it. This cannot be undone.`,
+            `Delete ${label}? Its songs and team go with it. This cannot be undone.`,
           )
         )
           return;
@@ -31,7 +31,7 @@ export function DeleteServiceButton({
       }}
     >
       <Trash2 aria-hidden />
-      {pending ? "Deleting…" : "Delete service"}
+      {pending ? "Deleting…" : "Delete set"}
     </Button>
   );
 }

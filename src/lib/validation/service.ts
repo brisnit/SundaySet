@@ -59,22 +59,7 @@ export const serviceInputSchema = z.object({
     .enum(["DRAFT", "READY", "INVITATIONS_SENT", "CONFIRMED", "COMPLETED"])
     .default("DRAFT"),
 
-  // Sermon is a 1:1 relation on Service, so it belongs on the same form. These
-  // themes are what the AI planner will match songs against later.
-  sermonTitle: optionalFormText(200),
-  sermonSeries: optionalFormText(160),
-  sermonScripture: optionalFormText(160),
-  sermonDescription: optionalFormText(4000),
 });
 
 export type ServiceInput = z.infer<typeof serviceInputSchema>;
 
-/** True when any sermon field was filled in. */
-export function hasSermonContent(input: ServiceInput): boolean {
-  return Boolean(
-    input.sermonTitle ||
-      input.sermonSeries ||
-      input.sermonScripture ||
-      input.sermonDescription,
-  );
-}

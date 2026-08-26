@@ -7,10 +7,14 @@ import { Search, X } from "lucide-react";
 import { Select } from "@/components/ui/field";
 import { titleCase } from "@/lib/format";
 
-const SONG_TYPES = [
-  "UPBEAT", "MID_TEMPO", "REFLECTIVE", "HYMN", "COMMUNION", "EASTER",
-  "CHRISTMAS", "ADVENT", "RESPONSE", "BAPTISM", "PRAYER", "OFFERING",
-];
+/**
+ * Song types offered in the product.
+ *
+ * The SongType enum still holds church-specific occasions (COMMUNION, ADVENT,
+ * BAPTISM, OFFERING...) so existing data stays valid and no destructive
+ * migration is needed — they are simply no longer offered here.
+ */
+const SONG_TYPES = ["UPBEAT", "MID_TEMPO", "REFLECTIVE", "RESPONSE", "PRAYER"];
 
 const SORTS = [
   ["title", "Title"],

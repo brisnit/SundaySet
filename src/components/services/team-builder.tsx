@@ -243,7 +243,7 @@ export function TeamBuilder({
         <div className="rounded-lg border border-dashed border-line-strong bg-sunken/50 px-5 py-10 text-center">
           <p className="font-display text-lg text-ink">No positions set up</p>
           <p className="mx-auto mt-1.5 max-w-sm text-sm text-ink-muted">
-            Add the roles your church schedules before building a team.
+            Add the roles you schedule before building a team.
           </p>
         </div>
       ) : (

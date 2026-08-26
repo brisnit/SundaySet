@@ -30,10 +30,6 @@ const input = (over: Partial<ServiceInput> = {}): ServiceInput => ({
   title: undefined,
   notes: undefined,
   status: "DRAFT",
-  sermonTitle: undefined,
-  sermonSeries: undefined,
-  sermonScripture: undefined,
-  sermonDescription: undefined,
   ...over,
 });
 
@@ -97,18 +93,6 @@ describe.skipIf(!dbReachable)("service writes", () => {
     expect(s.createdById).toBe(alpha.ctx.userId);
   });
 
-  it("creates a sermon only when sermon fields were filled in", async () => {
-    const bare = await createService(alpha.ctx, input());
-    expect((await getServiceById(alpha.ctx, bare.id)).sermon).toBeNull();
-
-    const withSermon = await createService(
-      alpha.ctx,
-      input({ sermonTitle: "The Prodigal Son", sermonScripture: "Luke 15:11–32" }),
-    );
-    const read = await getServiceById(alpha.ctx, withSermon.id);
-    expect(read.sermon?.title).toBe("The Prodigal Son");
-    expect(read.sermon?.scripture).toBe("Luke 15:11–32");
-  });
 
   it("accepts a service type belonging to the same church", async () => {
     const s = await createService(
@@ -154,18 +138,20 @@ describe.skipIf(!dbReachable)("service writes", () => {
     ).rejects.toBeInstanceOf(NotFoundError);
   });
 
-  it("adds a sermon on update when one did not exist", async () => {
-    const s = await createService(alpha.ctx, input());
-    await updateService(alpha.ctx, s.id, input({ sermonTitle: "Added Later" }));
-    expect((await getServiceById(alpha.ctx, s.id)).sermon?.title).toBe("Added Later");
-  });
 
-  it("removes the sermon when every sermon field is cleared", async () => {
-    // An empty sermon row would read as a real theme to the AI planner.
-    const s = await createService(alpha.ctx, input({ sermonTitle: "Temporary" }));
-    expect((await getServiceById(alpha.ctx, s.id)).sermon).not.toBeNull();
-    await updateService(alpha.ctx, s.id, input({ sermonTitle: undefined }));
-    expect((await getServiceById(alpha.ctx, s.id)).sermon).toBeNull();
+
+  it("leaves an existing sermon row untouched", async () => {
+    // Sermons were removed from the product but the model is dormant, not
+    // dropped. Editing a service must not silently delete historical rows.
+    const svc = await createService(alpha.ctx, input({ title: "Has Sermon" }));
+    await db.sermon.create({
+      data: { serviceId: svc.id, title: "Historical sermon" },
+    });
+
+    await updateService(alpha.ctx, svc.id, input({ title: "Renamed" }));
+
+    const after = await db.sermon.findUnique({ where: { serviceId: svc.id } });
+    expect(after?.title).toBe("Historical sermon");
   });
 
   it("deletes a service the church owns", async () => {

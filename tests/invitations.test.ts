@@ -40,10 +40,6 @@ const serviceInput = (date = FUTURE): ServiceInput => ({
   title: "Invite Test",
   notes: "PLANNER ONLY SECRET",
   status: "DRAFT",
-  sermonTitle: undefined,
-  sermonSeries: undefined,
-  sermonScripture: undefined,
-  sermonDescription: undefined,
 });
 
 async function makeChurch(slug: string) {

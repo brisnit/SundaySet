@@ -238,7 +238,7 @@ export default async function TeamMemberPage({
                     : `${member.preferredPerMonth}×`,
                 )}
                 {row(
-                  "Preferred service",
+                  "Preferred slot",
                   member.preferredServiceType?.name ?? "No preference",
                 )}
                 {member.vocalRange ? row("Vocal range", member.vocalRange) : null}

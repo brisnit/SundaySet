@@ -33,10 +33,6 @@ const serviceInput = (): ServiceInput => ({
   title: "Setlist Test",
   notes: undefined,
   status: "DRAFT",
-  sermonTitle: undefined,
-  sermonSeries: undefined,
-  sermonScripture: undefined,
-  sermonDescription: undefined,
 });
 
 async function makeChurch(slug: string) {

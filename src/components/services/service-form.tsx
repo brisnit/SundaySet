@@ -16,10 +16,6 @@ export type ServiceFormValues = {
   title: string;
   notes: string;
   status: string;
-  sermonTitle: string;
-  sermonSeries: string;
-  sermonScripture: string;
-  sermonDescription: string;
 };
 
 export type ServiceTypeOption = {
@@ -82,9 +78,9 @@ export function ServiceForm({
           </Field>
 
           <Field
-            label="Service time"
+            label="Time slot"
             htmlFor="serviceTypeId"
-            hint="Set these up in Settings"
+            hint="Recurring slots you've set up"
             error={err("serviceTypeId")}
           >
             <Select
@@ -92,7 +88,7 @@ export function ServiceForm({
               name="serviceTypeId"
               defaultValue={values.serviceTypeId}
             >
-              <option value="">No specific service</option>
+              <option value="">No specific slot</option>
               {serviceTypes.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -104,7 +100,7 @@ export function ServiceForm({
           <Field
             label="Start time"
             htmlFor="startTime"
-            hint="Church local time, 24-hour"
+            hint="Local time, 24-hour"
             error={err("startTime")}
           >
             <Input
@@ -134,13 +130,13 @@ export function ServiceForm({
 
       <Card>
         <CardHeader>
-          <CardTitle>What</CardTitle>
+          <CardTitle>Details</CardTitle>
         </CardHeader>
         <CardBody className="grid gap-4">
           <Field
-            label="Service name"
+            label="Set name"
             htmlFor="title"
-            hint="Optional. Falls back to the sermon title in lists."
+            hint="Optional. Unnamed sets are listed by their date."
             error={err("title")}
           >
             <Input
@@ -176,60 +172,6 @@ export function ServiceForm({
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Sermon</CardTitle>
-        </CardHeader>
-        <CardBody className="grid gap-4">
-          <p className="text-xs leading-relaxed text-ink-subtle">
-            All optional. These are the themes SetMeister will match songs
-            against when AI planning arrives.
-          </p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Sermon title" htmlFor="sermonTitle" error={err("sermonTitle")}>
-              <Input
-                id="sermonTitle"
-                name="sermonTitle"
-                defaultValue={values.sermonTitle}
-                placeholder="The Prodigal Son"
-              />
-            </Field>
-            <Field label="Series" htmlFor="sermonSeries" error={err("sermonSeries")}>
-              <Input
-                id="sermonSeries"
-                name="sermonSeries"
-                defaultValue={values.sermonSeries}
-                placeholder="Lost &amp; Found"
-              />
-            </Field>
-          </div>
-          <Field
-            label="Scripture"
-            htmlFor="sermonScripture"
-            error={err("sermonScripture")}
-          >
-            <Input
-              id="sermonScripture"
-              name="sermonScripture"
-              defaultValue={values.sermonScripture}
-              placeholder="Luke 15:11–32"
-            />
-          </Field>
-          <Field
-            label="Description"
-            htmlFor="sermonDescription"
-            hint="A sentence or two, or paste your notes."
-            error={err("sermonDescription")}
-          >
-            <Textarea
-              id="sermonDescription"
-              name="sermonDescription"
-              rows={4}
-              defaultValue={values.sermonDescription}
-            />
-          </Field>
-        </CardBody>
-      </Card>
 
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>

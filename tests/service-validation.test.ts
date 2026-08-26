@@ -1,11 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  hasSermonContent,
   parseServiceDate,
   serviceInputSchema,
   toDateInputValue,
-  type ServiceInput,
 } from "@/lib/validation/service";
 
 const base = {
@@ -15,10 +13,6 @@ const base = {
   callTime: "",
   title: "",
   notes: "",
-  sermonTitle: "",
-  sermonSeries: "",
-  sermonScripture: "",
-  sermonDescription: "",
 };
 
 describe("service date handling", () => {
@@ -79,7 +73,7 @@ describe("optional fields", () => {
     if (r.success) {
       expect(r.data.title).toBeUndefined();
       expect(r.data.serviceTypeId).toBeUndefined();
-      expect(r.data.sermonTitle).toBeUndefined();
+      expect(r.data.notes).toBeUndefined();
     }
   });
 
@@ -94,30 +88,6 @@ describe("optional fields", () => {
   });
 });
 
-describe("hasSermonContent", () => {
-  const parsed = (over: Record<string, string>) => {
-    const r = serviceInputSchema.safeParse({ ...base, ...over });
-    if (!r.success) throw new Error("bad fixture");
-    return r.data as ServiceInput;
-  };
-
-  it("is false when every sermon field is blank", () => {
-    expect(hasSermonContent(parsed({}))).toBe(false);
-  });
-
-  it.each([
-    ["sermonTitle", "The Prodigal Son"],
-    ["sermonSeries", "Lost & Found"],
-    ["sermonScripture", "Luke 15"],
-    ["sermonDescription", "Grace and return."],
-  ])("is true when only %s is filled in", (field, value) => {
-    expect(hasSermonContent(parsed({ [field]: value }))).toBe(true);
-  });
-
-  it("ignores whitespace-only input", () => {
-    expect(hasSermonContent(parsed({ sermonTitle: "   " }))).toBe(false);
-  });
-});
 
 describe("absent form fields", () => {
   // Same null-from-FormData regression as the team form.
@@ -129,17 +99,12 @@ describe("absent form fields", () => {
       callTime: null,
       title: null,
       notes: null,
-      sermonTitle: null,
-      sermonSeries: null,
-      sermonScripture: null,
-      sermonDescription: null,
     });
     expect(r.success).toBe(true);
     if (r.success) {
       expect(r.data.callTime).toBeUndefined();
       expect(r.data.title).toBeUndefined();
       expect(r.data.serviceTypeId).toBeUndefined();
-      expect(hasSermonContent(r.data)).toBe(false);
     }
   });
 });

@@ -25,9 +25,6 @@ export function AppShell({
           <span className="font-display text-xl font-semibold tracking-tight text-ink">
             SetMeister
           </span>
-          <span className="mt-0.5 block text-xs text-ink-subtle">
-            {ctx.church.name}
-          </span>
         </Link>
 
         <div className="flex flex-1 flex-col gap-0.5">
@@ -53,7 +50,6 @@ export function AppShell({
           <Link href="/home" className="font-display text-lg font-semibold">
             SetMeister
           </Link>
-          <span className="text-xs text-ink-subtle">{ctx.church.name}</span>
         </header>
 
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-6 pb-24 md:px-8 md:pt-10 md:pb-16">
@@ -76,8 +72,8 @@ export function PageHeader({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-      <div>
+    <div className="mb-8 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+      <div className="min-w-0">
         <h1 className="font-display text-3xl tracking-tight text-ink md:text-4xl">
           {title}
         </h1>
@@ -85,7 +81,11 @@ export function PageHeader({
           <p className="mt-1.5 text-sm text-ink-muted">{subtitle}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex gap-2">{actions}</div> : null}
+      {/* Actions align to the top so the title's baseline never moves when
+          they wrap to a second line on narrow screens. */}
+      {actions ? (
+        <div className="flex shrink-0 flex-wrap gap-2 pt-1">{actions}</div>
+      ) : null}
     </div>
   );
 }

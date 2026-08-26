@@ -188,10 +188,6 @@ const SERVICE_INPUT: Parameters<typeof createService>[1] = {
   title: undefined,
   notes: undefined,
   status: "DRAFT",
-  sermonTitle: undefined,
-  sermonSeries: undefined,
-  sermonScripture: undefined,
-  sermonDescription: undefined,
 };
 
 const MEMBER_INPUT: Parameters<typeof createTeamMember>[1] = {
