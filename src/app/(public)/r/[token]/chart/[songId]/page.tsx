@@ -47,6 +47,14 @@ export default async function InvitationChartPage({
             .filter(Boolean)
             .join("  ·  ")}
         </p>
+
+        {/* Say so plainly. A musician who knows the song in its written key
+            should not have to work out why the chords look unfamiliar. */}
+        {chart.transposedFrom ? (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-ember-soft px-2.5 py-1 text-xs font-medium text-ember-ink">
+            Transposed from {chart.transposedFrom} for this set
+          </p>
+        ) : null}
       </header>
 
       {chart.attachmentUrl ? (

@@ -387,6 +387,112 @@ describe.skipIf(!dbReachable)("invitations", () => {
         resolveInvitationChart(token, beta.song.id),
       ).rejects.toBeInstanceOf(InvalidTokenError);
     });
+
+    /**
+     * Before transposition existed this page printed "Key of A" above chords
+     * still written in G, which is worse than printing nothing — a musician
+     * reads the chart, not the header.
+     */
+    describe("in the key the set is playing it in", () => {
+      const withChart = async () => {
+        const serviceId = await scheduled();
+        await db.songChart.upsert({
+          where: { songId: alpha.song.id },
+          create: {
+            songId: alpha.song.id,
+            format: "STRUCTURED",
+            key: "G",
+            sections: [
+              {
+                label: "Verse 1",
+                type: "VERSE",
+                lines: [{ chords: "G       C       D", lyrics: "the words stay put" }],
+              },
+            ],
+          },
+          update: {
+            key: "G",
+            sections: [
+              {
+                label: "Verse 1",
+                type: "VERSE",
+                lines: [{ chords: "G       C       D", lyrics: "the words stay put" }],
+              },
+            ],
+          },
+        });
+        return serviceId;
+      };
+
+      const chordsOf = (chart: { sections: unknown }) =>
+        (chart.sections as Array<{ lines: Array<{ chords: string }> }>)[0].lines.map(
+          (l) => l.chords,
+        );
+
+      it("transposes the chords to the set's key", async () => {
+        const serviceId = await withChart();
+        await db.serviceSong.updateMany({
+          where: { serviceId, songId: alpha.song.id },
+          data: { key: "A" },
+        });
+
+        const { token } = await inviteMemberToService(alpha.ctx, serviceId, alpha.member.id);
+        const chart = await resolveInvitationChart(token, alpha.song.id);
+
+        expect(chart.key).toBe("A");
+        expect(chart.transposedFrom).toBe("G");
+        expect(chordsOf(chart)).toEqual(["A       D       E"]);
+      });
+
+      it("leaves the lyrics exactly as written", async () => {
+        const serviceId = await withChart();
+        await db.serviceSong.updateMany({
+          where: { serviceId, songId: alpha.song.id },
+          data: { key: "Bb" },
+        });
+
+        const { token } = await inviteMemberToService(alpha.ctx, serviceId, alpha.member.id);
+        const chart = await resolveInvitationChart(token, alpha.song.id);
+        const lines = (chart.sections as Array<{ lines: Array<{ lyrics: string }> }>)[0].lines;
+        expect(lines[0].lyrics).toBe("the words stay put");
+      });
+
+      // The stored chart is the canonical one. A set is a view of it.
+      it("does not rewrite what is stored", async () => {
+        const serviceId = await withChart();
+        await db.serviceSong.updateMany({
+          where: { serviceId, songId: alpha.song.id },
+          data: { key: "Eb" },
+        });
+
+        const { token } = await inviteMemberToService(alpha.ctx, serviceId, alpha.member.id);
+        await resolveInvitationChart(token, alpha.song.id);
+
+        const stored = await db.songChart.findUniqueOrThrow({
+          where: { songId: alpha.song.id },
+          select: { key: true, sections: true },
+        });
+        expect(stored.key).toBe("G");
+        expect(
+          (stored.sections as Array<{ lines: Array<{ chords: string }> }>)[0].lines[0].chords,
+        ).toBe("G       C       D");
+      });
+
+      it("shows the chart's own key when the set has not chosen one", async () => {
+        const serviceId = await withChart();
+        await db.serviceSong.updateMany({
+          where: { serviceId, songId: alpha.song.id },
+          data: { key: null },
+        });
+
+        const { token } = await inviteMemberToService(alpha.ctx, serviceId, alpha.member.id);
+        const chart = await resolveInvitationChart(token, alpha.song.id);
+
+        expect(chart.key).toBe("G");
+        expect(chart.transposedFrom).toBeNull();
+        expect(chordsOf(chart)).toEqual(["G       C       D"]);
+      });
+    });
   });
 
   describe("service page state", () => {

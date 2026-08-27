@@ -4,7 +4,12 @@ import { notFound } from "next/navigation";
 import { requireChurchContext } from "@/lib/auth/session";
 import { NotFoundError } from "@/lib/data/context";
 import { getSongById } from "@/lib/data/songs";
+import {
+  nashvilleSections,
+  transposeSections,
+} from "@/lib/music/transpose";
 import { chartSectionSchema } from "@/lib/validation/song";
+import { SETLIST_KEYS } from "@/lib/validation/setlist";
 
 export const metadata = { title: "Chart" };
 
@@ -12,11 +17,17 @@ export const metadata = { title: "Chart" };
  * Print-friendly chart. Deliberately outside the app shell: no navigation, no
  * colour, generous line height. Browser "Print to PDF" is the export path for
  * MVP, which keeps charts working with no PDF toolchain.
+ *
+ * `?key=` shows the chart in another key without changing it, which is how a
+ * set's chosen key reaches the printed page. `?numbers=1` shows the same chart
+ * as Nashville numbers. Both are views — the stored chart never moves.
  */
 export default async function ChartPrintPage({
   params,
+  searchParams,
 }: PageProps<"/songs/[songId]/chart/print">) {
   const { songId } = await params;
+  const query = await searchParams;
   const ctx = await requireChurchContext();
 
   const song = await getSongById(ctx, songId).catch((e) => {
@@ -25,15 +36,58 @@ export default async function ChartPrintPage({
   });
 
   const parsed = chartSectionSchema.array().safeParse(song.chart?.sections ?? []);
-  const sections = parsed.success ? parsed.data : [];
+  const stored = parsed.success ? parsed.data : [];
+
+  const chartKey = song.chart?.key ?? null;
+  const asked = Array.isArray(query.key) ? query.key[0] : query.key;
+  // Only a key we actually offer, so the URL cannot inject anything odd.
+  const requestedKey =
+    asked && (SETLIST_KEYS as readonly string[]).includes(asked) ? asked : null;
+
+  const transposed =
+    requestedKey && chartKey && requestedKey !== chartKey
+      ? { key: requestedKey, sections: transposeSections(stored, chartKey, requestedKey) }
+      : null;
+
+  const showNumbers =
+    (Array.isArray(query.numbers) ? query.numbers[0] : query.numbers) === "1";
+
+  const displayKey = transposed?.key ?? chartKey ?? song.churchKey;
+  const sections = showNumbers
+    ? nashvilleSections(transposed?.sections ?? stored, displayKey)
+    : (transposed?.sections ?? stored);
+
+  const linkWith = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams();
+    if (requestedKey) next.set("key", requestedKey);
+    if (showNumbers) next.set("numbers", "1");
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null) next.delete(k);
+      else next.set(k, v);
+    }
+    const qs = next.toString();
+    return `/songs/${songId}/chart/print${qs ? `?${qs}` : ""}`;
+  };
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8 print:px-0 print:py-0">
-      <div className="no-print mb-6 flex justify-between text-sm">
+      <div className="no-print mb-6 flex flex-wrap items-center justify-between gap-3 text-sm">
         <Link href={`/songs/${songId}`} className="text-ember hover:underline">
           ← Back to song
         </Link>
-        <span className="text-ink-subtle">Use your browser&rsquo;s Print to save a PDF</span>
+        <div className="flex items-center gap-4">
+          {sections.length > 0 && displayKey ? (
+            <Link
+              href={linkWith({ numbers: showNumbers ? null : "1" })}
+              className="text-ember hover:underline"
+            >
+              {showNumbers ? "Show chords" : "Show numbers"}
+            </Link>
+          ) : null}
+          <span className="text-ink-subtle">
+            Use your browser&rsquo;s Print to save a PDF
+          </span>
+        </div>
       </div>
 
       <header className="mb-6 border-b border-line pb-4">
@@ -41,13 +95,24 @@ export default async function ChartPrintPage({
         <p className="mt-1 text-sm text-ink-muted">
           {[
             song.artist,
-            song.chart?.key ? `Key of ${song.chart.key}` : song.churchKey ? `Key of ${song.churchKey}` : null,
+            showNumbers
+              ? displayKey
+                ? `Numbers in ${displayKey}`
+                : null
+              : displayKey
+                ? `Key of ${displayKey}`
+                : null,
             song.chart?.capo ? `Capo ${song.chart.capo}` : null,
             song.bpm ? `${song.bpm} BPM` : null,
           ]
             .filter(Boolean)
             .join("  ·  ")}
         </p>
+        {transposed ? (
+          <p className="mt-1 text-xs text-ink-subtle">
+            Transposed from {chartKey}. The saved chart is unchanged.
+          </p>
+        ) : null}
       </header>
 
       {sections.length === 0 ? (
@@ -70,7 +135,7 @@ export default async function ChartPrintPage({
                     {line.chords ? (
                       <div className="font-semibold text-ember-ink">{line.chords}</div>
                     ) : null}
-                    <div>{line.lyrics || " "}</div>
+                    <div>{line.lyrics || " "}</div>
                   </div>
                 ))}
               </div>

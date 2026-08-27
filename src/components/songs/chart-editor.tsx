@@ -2,12 +2,15 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { GripVertical, Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, GripVertical, Plus, Trash2 } from "lucide-react";
 
 import type { FormState } from "@/app/(app)/songs/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { semitonesBetween, spellingForKey } from "@/lib/music/chords";
+import { transposeChartText } from "@/lib/music/transpose";
+import { SETLIST_KEYS } from "@/lib/validation/setlist";
 
 const SECTION_TYPES = [
   ["VERSE", "Verse"], ["PRECHORUS", "Pre-chorus"], ["CHORUS", "Chorus"],
@@ -38,6 +41,29 @@ export function ChartEditor({
       ? initialSections
       : [{ label: "Verse 1", type: "VERSE", body: "" }],
   );
+  const [key, setKey] = useState(initialKey);
+  const [moveTo, setMoveTo] = useState("");
+  const [moved, setMoved] = useState<string | null>(null);
+
+  /**
+   * Rewrite the chart into another key for good.
+   *
+   * This is the deliberate one — it changes what is stored, unlike a set
+   * playing the song in a different key, which only changes how it is shown.
+   * Nothing is written until Save, so it can be undone by leaving the page.
+   */
+  const changeKey = () => {
+    const semitones = semitonesBetween(key, moveTo);
+    if (semitones === null) return;
+
+    const spelling = spellingForKey(moveTo);
+    setSections((current) =>
+      current.map((s) => ({ ...s, body: transposeChartText(s.body, semitones, spelling) })),
+    );
+    setMoved(key);
+    setKey(moveTo);
+    setMoveTo("");
+  };
 
   const update = (i: number, patch: Partial<EditorSection>) =>
     setSections((s) => s.map((sec, j) => (j === i ? { ...sec, ...patch } : sec)));
@@ -63,13 +89,58 @@ export function ChartEditor({
         <CardHeader>
           <CardTitle>Chart settings</CardTitle>
         </CardHeader>
-        <CardBody className="grid gap-4 sm:grid-cols-2">
-          <Field label="Key" htmlFor="key" hint="The key this chart is written in">
-            <Input id="key" name="key" defaultValue={initialKey} placeholder="G" />
-          </Field>
-          <Field label="Capo" htmlFor="capo" hint="Leave blank for none">
-            <Input id="capo" name="capo" type="number" min={0} max={11} defaultValue={initialCapo} />
-          </Field>
+        <CardBody className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Key" htmlFor="key" hint="The key this chart is written in">
+              <Input
+                id="key"
+                name="key"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="G"
+              />
+            </Field>
+            <Field label="Capo" htmlFor="capo" hint="Leave blank for none">
+              <Input id="capo" name="capo" type="number" min={0} max={11} defaultValue={initialCapo} />
+            </Field>
+          </div>
+
+          {/* Rewriting the chart itself, as opposed to a set playing it in
+              another key — which needs no rewriting at all. */}
+          <div className="border-t border-line pt-4">
+            <p className="mb-2 text-sm font-medium text-ink">Transpose this chart</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <Field label="Move to" htmlFor="moveTo" className="w-36">
+                <Select
+                  id="moveTo"
+                  value={moveTo}
+                  onChange={(e) => setMoveTo(e.target.value)}
+                >
+                  <option value="">Choose a key</option>
+                  {SETLIST_KEYS.map((k) => (
+                    <option key={k} value={k}>{k}</option>
+                  ))}
+                </Select>
+              </Field>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!key.trim() || !moveTo || moveTo === key}
+                onClick={changeKey}
+                className="mb-0.5"
+              >
+                <ArrowLeftRight aria-hidden />
+                Rewrite the chords
+              </Button>
+            </div>
+            <p className="mt-1.5 text-xs text-ink-subtle">
+              {key.trim()
+                ? moved
+                  ? `Rewritten from ${moved} to ${key}. Save to keep it.`
+                  : "Changes the saved chart. To play one set in another key, set the key on that set instead."
+                : "Set the chart’s key first, so SetMeister knows where it is moving from."}
+            </p>
+          </div>
         </CardBody>
       </Card>
 

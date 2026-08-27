@@ -168,7 +168,13 @@ export function SetlistBuilder({
 
               {row.hasChart ? (
                 <Link
-                  href={`/songs/${row.songId}/chart/print`}
+                  // Carry the set's key so the chart opens in the key this
+                  // set plays it in, not the key it happens to be written in.
+                  href={
+                    row.key
+                      ? `/songs/${row.songId}/chart/print?key=${encodeURIComponent(row.key)}`
+                      : `/songs/${row.songId}/chart/print`
+                  }
                   className="text-ink-subtle hover:text-ember"
                   aria-label={`Chart for ${row.title}`}
                   title="Chart"

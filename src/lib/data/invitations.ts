@@ -2,6 +2,8 @@ import "server-only";
 
 import type { AssignmentStatus } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
+import { transposeSections } from "@/lib/music/transpose";
+import { chartSectionSchema } from "@/lib/validation/song";
 import {
   expiryForService,
   generateToken,
@@ -324,7 +326,10 @@ export async function getInvitationStates(
 export type PublicChart = {
   title: string;
   artist: string | null;
+  /** The key the chords below are actually written in. */
   key: string | null;
+  /** Set when the chart was moved to the set's key, so the view can say so. */
+  transposedFrom: string | null;
   capo: number | null;
   bpm: number | null;
   sections: unknown;
@@ -362,13 +367,33 @@ export async function resolveInvitationChart(
   const setlistKey =
     invitation.songs.find((s) => s.songId === songId)?.key ?? null;
 
+  const chartKey = song.chart?.key ?? null;
+
+  /**
+   * Transpose to the key this set is playing it in.
+   *
+   * Until now the header said "Key of A" while the chords underneath were still
+   * in G, which is worse than saying nothing: a musician reads the chart, not
+   * the header. The stored chart is never modified — this is a view of it.
+   */
+  const parsed = chartSectionSchema.array().safeParse(song.chart?.sections ?? []);
+  const stored = parsed.success ? parsed.data : [];
+
+  const shouldTranspose =
+    Boolean(setlistKey) && Boolean(chartKey) && setlistKey !== chartKey;
+  const sections = shouldTranspose
+    ? transposeSections(stored, chartKey, setlistKey)
+    : stored;
+
   return {
     title: song.title,
     artist: song.artist,
-    key: setlistKey ?? song.chart?.key ?? song.churchKey,
+    // The key the chords are really in, which is the point of all this.
+    key: shouldTranspose ? setlistKey : (chartKey ?? setlistKey ?? song.churchKey),
+    transposedFrom: shouldTranspose ? chartKey : null,
     capo: song.chart?.capo ?? null,
     bpm: song.bpm,
-    sections: song.chart?.sections ?? [],
+    sections,
     attachmentUrl: song.attachments[0]?.url ?? null,
   };
 }
