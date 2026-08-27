@@ -20,6 +20,8 @@ import { titleCase } from "@/lib/format";
 
 export type InviteState = { invited: boolean };
 
+export type PositionOption = { id: string; name: string; category: string };
+
 export type TeamSlotView = {
   positionId: string;
   positionName: string;
@@ -46,6 +48,17 @@ export type PoolMember = {
   preferredServiceTypeName: string | null;
   positionsInThisService: string[];
   declinedThisService: boolean;
+};
+
+/**
+ * Position categories are stored as WORSHIP / TECH / OTHER, but the product is
+ * not church-specific, so they are shown generically. The enum values stay put
+ * — renaming them would be a destructive migration for a label.
+ */
+const CATEGORY_LABEL: Record<string, string> = {
+  WORSHIP: "Band",
+  TECH: "Tech",
+  OTHER: "Other",
 };
 
 const STATUS_TONE: Record<string, "neutral" | "amber" | "sage" | "clay" | "slate"> = {
@@ -89,6 +102,7 @@ export function TeamBuilder({
   serviceId,
   serviceDate,
   slots,
+  positions,
   pool,
   canEdit,
   canInvite,
@@ -98,6 +112,7 @@ export function TeamBuilder({
   /** ISO date of the service, for evaluating blockouts in the browser. */
   serviceDate: string;
   slots: TeamSlotView[];
+  positions: PositionOption[];
   pool: PoolMember[];
   canEdit: boolean;
   canInvite: boolean;
@@ -222,12 +237,53 @@ export function TeamBuilder({
     );
   };
 
+  /** Step one of adding: which spot are we filling? */
+  const positionChooser = () => {
+    const grouped = positions.reduce<Record<string, PositionOption[]>>((acc, p) => {
+      (acc[p.category] ??= []).push(p);
+      return acc;
+    }, {});
+    return (
+      <div className="mt-2 rounded-2xl border border-line/70 bg-surface p-3 shadow-card">
+        <p className="mb-2 px-1 text-xs text-ink-subtle">
+          Which spot are they covering?
+        </p>
+        <div className="grid gap-3">
+          {Object.entries(grouped).map(([category, options]) => (
+            <div key={category}>
+              <p className="mb-1.5 text-xs font-bold tracking-[0.08em] text-ink-muted uppercase">
+                {CATEGORY_LABEL[category] ?? titleCase(category)}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {options.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPicking(`pos:${p.id}`)}
+                    className="rounded-full border-[0.5px] border-ember px-3 py-1.5 text-xs font-medium text-ember transition-colors hover:bg-ember-soft"
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="mt-2 flex justify-end border-t border-line pt-2">
+          <Button variant="ghost" size="sm" onClick={() => setPicking(null)}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   const byCategory = slots.reduce<Record<string, TeamSlotView[]>>((acc, s) => {
     (acc[s.category] ??= []).push(s);
     return acc;
   }, {});
 
-  const filled = slots.filter((s) => s.assignments.length > 0).length;
+  const totalPeople = slots.reduce((n, s) => n + s.assignments.length, 0);
 
   return (
     <div className="grid gap-4">
@@ -240,23 +296,40 @@ export function TeamBuilder({
         </p>
       ) : null}
 
-      {slots.length === 0 ? (
+      {positions.length === 0 ? (
         <EmptyState
           compact
           icon={<Users className="size-5" />}
           title="No positions set up"
           description="Add the roles you schedule before building a team."
         />
+      ) : slots.length === 0 ? (
+        <>
+          <EmptyState
+            compact
+            icon={<Users className="size-5" />}
+            title="No team yet"
+            description="Add the people playing this set and the spot each of them is covering."
+          />
+          {canEdit ? (
+            <div>
+              <Button variant="secondary" onClick={() => setPicking("choose-position")}>
+                <UserPlus aria-hidden />
+                Add team member
+              </Button>
+            </div>
+          ) : null}
+        </>
       ) : (
         <>
           <p className="text-xs text-ink-subtle">
-            {filled} of {slots.length} positions filled
+            {totalPeople} {totalPeople === 1 ? "person" : "people"} on this set
           </p>
 
           {Object.entries(byCategory).map(([category, rows]) => (
             <section key={category}>
-              <h3 className="mb-1.5 text-xs font-semibold tracking-wide text-ink-muted uppercase">
-                {titleCase(category)}
+              <h3 className="mb-1.5 text-xs font-bold tracking-[0.08em] text-ink-muted uppercase">
+                {CATEGORY_LABEL[category] ?? titleCase(category)}
               </h3>
               <ul className="grid gap-1.5">
                 {rows.map((slot) => (
@@ -379,6 +452,15 @@ export function TeamBuilder({
               </ul>
             </section>
           ))}
+
+          {canEdit ? (
+            <div>
+              <Button variant="secondary" onClick={() => setPicking("choose-position")}>
+                <UserPlus aria-hidden />
+                Add team member
+              </Button>
+            </div>
+          ) : null}
         </>
       )}
     </div>

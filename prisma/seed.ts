@@ -478,7 +478,7 @@ async function main() {
       // A realistic in-flight Sunday: mostly confirmed, one awaiting reply,
       // and Keys deliberately left open so the dashboard has a real alert.
       const roster: Array<[string, string, "ACCEPTED" | "INVITED"]> = [
-        ["Britt Hollis", "Worship Leader", "ACCEPTED"],
+        ["Britt Hollis", "Leader", "ACCEPTED"],
         ["Mike Alvarez", "Electric Guitar", "ACCEPTED"],
         ["Sarah Kim", "Acoustic Guitar", "ACCEPTED"],
         ["David Osei", "Bass", "INVITED"],

@@ -8,8 +8,8 @@ export type SeedMember = {
 };
 
 export const SEED_TEAM: SeedMember[] = [
-  { name: "Britt Hollis", email: "britt@northminster.example", positions: ["Worship Leader", "Acoustic Guitar", "Electric Guitar", "Vocal"], vocalRange: "Baritone (A2–A4)", preferredPerMonth: 4, notes: "Leads most Sundays. Prefers keys of G, D and A." },
-  { name: "Naomi Carter", email: "naomi@northminster.example", positions: ["Worship Leader", "Vocal", "Keys"], vocalRange: "Alto (F3–D5)", preferredPerMonth: 2, notes: "Leads once or twice a month." },
+  { name: "Britt Hollis", email: "britt@northminster.example", positions: ["Leader", "Acoustic Guitar", "Electric Guitar", "Vocal"], vocalRange: "Baritone (A2–A4)", preferredPerMonth: 4, notes: "Leads most Sundays. Prefers keys of G, D and A." },
+  { name: "Naomi Carter", email: "naomi@northminster.example", positions: ["Leader", "Vocal", "Keys"], vocalRange: "Alto (F3–D5)", preferredPerMonth: 2, notes: "Leads once or twice a month." },
   { name: "Mike Alvarez", email: "mike@northminster.example", positions: ["Electric Guitar", "Acoustic Guitar"], preferredPerMonth: 3 },
   { name: "Sarah Kim", email: "sarah@northminster.example", positions: ["Acoustic Guitar", "Vocal"], vocalRange: "Soprano (A3–E5)", preferredPerMonth: 3 },
   { name: "David Osei", email: "david@northminster.example", positions: ["Bass"], preferredPerMonth: 2 },
@@ -26,7 +26,7 @@ export const SEED_TEAM: SeedMember[] = [
 ];
 
 export const WORSHIP_POSITIONS = [
-  "Worship Leader",
+  "Leader",
   "Acoustic Guitar",
   "Electric Guitar",
   "Bass",

@@ -9,6 +9,13 @@ import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
 import { titleCase } from "@/lib/format";
 
+/** Categories are stored WORSHIP/TECH/OTHER but shown generically. */
+const CATEGORY_LABEL: Record<string, string> = {
+  WORSHIP: "Band",
+  TECH: "Tech",
+  OTHER: "Other",
+};
+
 export type PositionOption = {
   id: string;
   name: string;
@@ -142,7 +149,7 @@ export function TeamMemberForm({
             Object.entries(byCategory).map(([category, options]) => (
               <fieldset key={category} className="grid gap-1.5">
                 <legend className="mb-1.5 text-xs font-semibold tracking-wide text-ink-muted uppercase">
-                  {titleCase(category)}
+                  {CATEGORY_LABEL[category] ?? titleCase(category)}
                 </legend>
                 <div className="flex flex-wrap gap-1.5">
                   {options.map((p) => (

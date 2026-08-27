@@ -15,6 +15,7 @@ import { NotFoundError } from "@/lib/data/context";
 import { getServiceById } from "@/lib/data/services";
 import { getSetlist, listAddableSongs } from "@/lib/data/setlist";
 import { getServiceTeam, listCandidatePool } from "@/lib/data/assignments";
+import { listPositions } from "@/lib/data/team";
 import { getInvitationStates } from "@/lib/data/invitations";
 import { formatServiceDate, formatTime, setName, titleCase } from "@/lib/format";
 
@@ -55,7 +56,8 @@ export default async function ServiceDetailPage({
   const canSchedule = can(ctx.role, "team:schedule");
   const canInvite = can(ctx.role, "invitations:send");
 
-  const [setlist, addable, teamSlots, pool, inviteStates] = await Promise.all([
+  const [setlist, addable, teamSlots, pool, inviteStates, positions] =
+    await Promise.all([
     getSetlist(ctx, serviceId),
     canEditSetlist ? listAddableSongs(ctx, serviceId) : Promise.resolve([]),
     getServiceTeam(ctx, serviceId),
@@ -63,6 +65,7 @@ export default async function ServiceDetailPage({
       ? listCandidatePool(ctx, serviceId, { includeInactive: true })
       : Promise.resolve([]),
     getInvitationStates(ctx, serviceId),
+    canSchedule ? listPositions(ctx) : Promise.resolve([]),
   ]);
   const heading =
     setName(service);
@@ -155,6 +158,11 @@ export default async function ServiceDetailPage({
                   [...inviteStates].map(([id, v]) => [id, v.invited]),
                 )}
                 slots={teamSlots}
+                positions={positions.map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  category: p.category,
+                }))}
                 pool={pool.map((m) => ({
                   ...m,
                   blockouts: m.blockouts.map((b) => ({

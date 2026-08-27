@@ -153,11 +153,20 @@ describe.skipIf(!dbReachable)("assignments", () => {
       expect(a.callTime).toBe("08:30");
     });
 
-    it("lists every active position, filled or open", async () => {
+    it("starts empty — a new set scaffolds no positions", async () => {
+      // The team is built by adding people, not by opening onto a dozen "Open"
+      // rows nobody asked for. listPositions still supplies the full list to
+      // the picker.
       const sid = await freshService();
+      expect(await getServiceTeam(alpha.ctx, sid)).toEqual([]);
+    });
+
+    it("lists only the positions somebody is actually assigned to", async () => {
+      const sid = await freshService();
+      await assignMember(alpha.ctx, sid, bassist.id, alpha.bass.id);
       const slots = await getServiceTeam(alpha.ctx, sid);
-      expect(slots.map((s) => s.positionName).sort()).toEqual(["Bass", "Drums", "Sound"]);
-      expect(slots.every((s) => s.assignments.length === 0)).toBe(true);
+      expect(slots.map((s) => s.positionName)).toEqual(["Bass"]);
+      expect(slots[0].assignments).toHaveLength(1);
     });
 
     it("allows the same person in two different positions", async () => {
@@ -374,12 +383,15 @@ describe.skipIf(!dbReachable)("assignments", () => {
   });
 
   describe("removing", () => {
-    it("removes an assignment and reopens the position", async () => {
+    it("removes an assignment, and the empty slot disappears with it", async () => {
       const sid = await freshService();
       const a = await assignMember(alpha.ctx, sid, bassist.id, alpha.bass.id);
+      await assignMember(alpha.ctx, sid, drummer.id, alpha.drums.id);
+
       await removeAssignment(alpha.ctx, a.id);
+
       const slots = await getServiceTeam(alpha.ctx, sid);
-      expect(slotFor(slots, alpha.bass.id).assignments).toEqual([]);
+      expect(slots.map((s) => s.positionName)).toEqual(["Drums"]);
     });
 
     it("frees the person to be assigned to that position again", async () => {

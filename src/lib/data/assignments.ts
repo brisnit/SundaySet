@@ -70,9 +70,15 @@ export type TeamSlot = {
 };
 
 /**
- * The team for one service, as the church's positions with whoever is assigned
- * under each. Conflicts are recomputed on read, so a blockout added after the
- * assignment still surfaces.
+ * The team for one set: only the positions somebody is actually assigned to.
+ *
+ * This deliberately does NOT scaffold every position the workspace has. A brand
+ * new set starts empty and the leader adds people to it, rather than opening
+ * onto a dozen "Open" rows they never asked for. `listPositions` still supplies
+ * the full list when the picker needs somewhere to add to.
+ *
+ * Conflicts are recomputed on read, so a blockout added after the assignment
+ * still surfaces.
  */
 export async function getServiceTeam(
   ctx: ChurchContext,
@@ -81,15 +87,10 @@ export async function getServiceTeam(
   const service = await loadService(ctx, serviceId);
   const { start, end } = monthBounds(service.date);
 
-  const [positions, assignments] = await Promise.all([
-    db.position.findMany({
-      where: { ...scope(ctx), active: true },
-      orderBy: [{ category: "asc" }, { sortOrder: "asc" }],
-    }),
-    db.assignment.findMany({
+  const assignments = await db.assignment.findMany({
       where: { serviceId, service: scope(ctx) },
       include: {
-        position: { select: { id: true, name: true, category: true } },
+        position: { select: { id: true, name: true, category: true, sortOrder: true } },
         teamMember: {
           select: {
             id: true,
@@ -101,23 +102,15 @@ export async function getServiceTeam(
           },
         },
       },
-    }),
-  ]);
+      orderBy: [{ position: { category: "asc" } }, { position: { sortOrder: "asc" } }],
+    });
 
   const memberIds = [...new Set(assignments.map((a) => a.teamMemberId))];
   const monthLoad = await monthlyLoad(ctx, memberIds, start, end);
 
-  // Positions may hold more than one person, and a position with someone
-  // assigned but since deactivated must still appear.
+  // A slot exists only because somebody is in it. Positions may hold more than
+  // one person, so slots are keyed by position and appended to.
   const slots = new Map<string, TeamSlot>();
-  for (const p of positions) {
-    slots.set(p.id, {
-      positionId: p.id,
-      positionName: p.name,
-      category: p.category,
-      assignments: [],
-    });
-  }
 
   for (const a of assignments) {
     const slot =
