@@ -212,6 +212,19 @@ model Song {
   familiarity            Familiarity    @default(NEW)
   status                 SongStatus     @default(ACTIVE)
 
+  /// Where this song came from, when it was added by searching a metadata
+  /// provider rather than typed in by hand. `externalId` is that provider's
+  /// stable id — a MusicBrainz recording MBID, for instance.
+  ///
+  /// These exist for duplicate detection, not for display: a musician never
+  /// sees an MBID. ISRC is the strongest signal of the three because it
+  /// identifies one specific recording rather than a spelling of its name.
+  externalProvider String?
+  externalId       String?
+  isrc             String?
+  releaseYear      Int?
+  durationMs       Int?
+
   /// Denormalized for list sorting. Recomputed whenever SongUsage changes.
   lastPlayedOn DateTime? @db.Date
   addedAt      DateTime  @default(now())
@@ -225,6 +238,8 @@ model Song {
   serviceSongs ServiceSong[]
 
   @@unique([churchId, title, artist])
+  @@index([churchId, externalProvider, externalId])
+  @@index([churchId, isrc])
   @@index([churchId, status])
   @@index([churchId, lastPlayedOn])
   @@index([churchId, familiarity])
@@ -241,6 +256,24 @@ model SongChart {
   sections  Json?
   bodyText  String?     @db.Text
   updatedAt DateTime    @updatedAt
+
+  /// Where this chart came from.
+  ///
+  /// A hand-typed chart, a machine transcription and a licensed import have
+  /// different rights attached, and until now they were indistinguishable once
+  /// stored. The default is correct for every row that existed before this
+  /// column did: they were all typed by a person.
+  source           ChartSource @default(USER_CREATED)
+  sourceProvider   String?
+  sourceRef        String?
+  sourceCapturedAt DateTime?
+
+  /// True once a person has edited the chart after it was imported. This is
+  /// what lets the UI stop warning that a machine wrote it.
+  editedByUser Boolean @default(false)
+
+  /// 0-1, AUTOCHART only. Nothing else should set it.
+  confidence Float?
 
   song Song @relation(fields: [songId], references: [id], onDelete: Cascade)
 }
@@ -741,6 +774,21 @@ enum SongStatus {
 enum ChartFormat {
   PLAIN
   STRUCTURED
+}
+
+/// Provenance for a chart. Charts carry different rights depending on who or
+/// what produced them, so the origin is recorded rather than inferred.
+enum ChartSource {
+  /// Typed or pasted into the SetMeister editor.
+  USER_CREATED
+  /// Imported from a file the user supplied.
+  USER_IMPORTED
+  CHORDPRO
+  /// Machine transcription. Always reviewable, never presented as settled.
+  AUTOCHART
+  LICENSED_PROVIDER
+  SONGSELECT
+  OTHER
 }
 
 enum AttachmentKind {

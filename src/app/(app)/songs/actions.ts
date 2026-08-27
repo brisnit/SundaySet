@@ -10,6 +10,7 @@ import {
   addSongFromCatalog,
   createSong,
   deleteSong,
+  DuplicateSongError,
   deleteSongAttachment,
   setSongStatus,
   updateSong,
@@ -73,7 +74,19 @@ export async function createSongAction(
     return { error: "Check the highlighted fields.", fieldErrors: fieldErrors(parsed.error.issues) };
   }
 
-  const song = await createSong(ctx, parsed.data);
+  let song;
+  try {
+    song = await createSong(ctx, parsed.data);
+  } catch (e) {
+    if (e instanceof DuplicateSongError) {
+      return {
+        error: "You already have a song with this title and artist.",
+        fieldErrors: { title: "Already in your songs" },
+      };
+    }
+    throw e;
+  }
+
   revalidatePath("/songs");
   redirect(`/songs/${song.id}`);
 }

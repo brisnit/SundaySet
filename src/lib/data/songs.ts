@@ -199,14 +199,36 @@ export async function songLibraryStats(ctx: ChurchContext) {
 // belongs to another church, so a wrong id can never mutate someone else's data.
 // ---------------------------------------------------------------------------
 
+/** Thrown when a workspace already has a song with this exact title and artist. */
+export class DuplicateSongError extends Error {
+  constructor() {
+    super("Duplicate song");
+    this.name = "DuplicateSongError";
+  }
+}
+
 export async function createSong(ctx: ChurchContext, input: SongInput) {
-  return db.song.create({
-    data: {
-      ...input,
-      churchId: ctx.churchId,
-      churchKey: input.churchKey ?? input.defaultKey,
-    },
-  });
+  try {
+    return await db.song.create({
+      data: {
+        ...input,
+        churchId: ctx.churchId,
+        churchKey: input.churchKey ?? input.defaultKey,
+      },
+    });
+  } catch (e) {
+    // @@unique([churchId, title, artist]). Adding a song you already have is an
+    // ordinary thing to do by accident, not a crash — it deserves a sentence,
+    // not a stack trace. Prisma raises P2002 for a unique violation.
+    if (
+      e !== null &&
+      typeof e === "object" &&
+      (e as { code?: string }).code === "P2002"
+    ) {
+      throw new DuplicateSongError();
+    }
+    throw e;
+  }
 }
 
 export async function updateSong(
@@ -295,10 +317,14 @@ export async function upsertSongChart(
     capo: input.capo,
     sections: input.sections,
   };
+
+  // Provenance. This chart was written by a person in the SetMeister editor,
+  // and `editedByUser` stays true forever after: once someone has been through
+  // a chart, no future importer or transcriber gets to call it unreviewed.
   return db.songChart.upsert({
     where: { songId },
-    create: { songId, ...data },
-    update: data,
+    create: { songId, ...data, source: "USER_CREATED", editedByUser: true },
+    update: { ...data, editedByUser: true },
   });
 }
 

@@ -27,6 +27,13 @@ const schema = z.object({
 
   BLOB_READ_WRITE_TOKEN: z.string().optional(),
 
+  /**
+   * MusicBrainz requires a User-Agent that identifies the application and gives
+   * them a way to make contact — anonymous agents are throttled hard. There is
+   * no API key; this string is the whole credential.
+   */
+  MUSICBRAINZ_CONTACT: z.string().optional(),
+
   APP_URL: z.string().url().default("http://localhost:3000"),
   INVITATION_TOKEN_SECRET: z.string().optional(),
 });
