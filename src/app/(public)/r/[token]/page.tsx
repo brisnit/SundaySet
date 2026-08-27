@@ -29,7 +29,7 @@ function Unusable({ title, body }: { title: string; body: string }) {
   return (
     <Shell>
       <div className="my-auto text-center">
-        <p className="font-display text-2xl text-ink">{title}</p>
+        <p className="font-display text-2xl font-bold text-ink">{title}</p>
         <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-ink-muted">
           {body}
         </p>
@@ -79,12 +79,12 @@ export default async function InvitationPage({
         <p className="text-xs font-semibold tracking-wide text-ember uppercase">
           {invitation.churchName}
         </p>
-        <h1 className="mt-1 font-display text-3xl leading-tight text-ink">
+        <h1 className="mt-1 font-display text-[28px] leading-tight font-bold tracking-[-0.02em] text-ink">
           Hi {invitation.memberName.split(" ")[0]}, you&rsquo;re scheduled
         </h1>
       </header>
 
-      <section className="mb-5 rounded-xl border border-line bg-surface p-4">
+      <section className="mb-5 rounded-2xl border border-line/70 bg-surface p-5 shadow-card">
         <div className="flex items-start gap-3">
           <CalendarDays aria-hidden className="mt-0.5 size-4 shrink-0 text-ink-subtle" />
           <div>
@@ -141,7 +141,7 @@ export default async function InvitationPage({
           The set
         </h2>
         {invitation.songs.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-line-strong bg-surface/60 px-4 py-6 text-center text-sm text-ink-muted">
+          <p className="rounded-xl border border-dashed border-line-strong bg-sunken/50 px-4 py-8 text-center text-sm text-ink-muted">
             The setlist isn&rsquo;t ready yet. Check back closer to Sunday.
           </p>
         ) : (
@@ -149,16 +149,16 @@ export default async function InvitationPage({
             {invitation.songs.map((s) => (
               <li
                 key={s.position}
-                className="flex items-center gap-3 rounded-xl border border-line bg-surface px-3 py-2.5"
+                className="flex items-center gap-3 rounded-xl bg-surface px-3 py-3 shadow-card"
               >
                 <span
                   aria-hidden
-                  className="w-5 shrink-0 text-center font-display text-base text-ink-subtle tabular-nums"
+                  className="grid size-7 shrink-0 place-items-center rounded-lg bg-ember-soft font-display text-sm font-bold text-ember tabular-nums"
                 >
                   {s.position}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium text-ink">
+                  <span className="block truncate font-display text-[15px] font-semibold text-ink">
                     {s.title}
                   </span>
                   {s.artist ? (
@@ -168,7 +168,7 @@ export default async function InvitationPage({
                   ) : null}
                 </span>
                 {s.key ? (
-                  <span className="shrink-0 rounded-md bg-sunken px-2 py-1 font-display text-sm text-ink">
+                  <span className="shrink-0 rounded-lg bg-ember-soft px-2.5 py-1 font-display text-sm font-bold text-ember">
                     {s.key}
                   </span>
                 ) : null}

@@ -22,9 +22,9 @@ export default async function HomePage() {
 
   return (
     <>
-      <div className="mb-8">
+      <div className="mb-7">
         <p className="text-sm text-ink-muted">Good to see you, {firstName}</p>
-        <h1 className="mt-1 font-display text-3xl tracking-tight text-ink md:text-4xl">
+        <h1 className="mt-1 font-display text-[32px] leading-tight font-bold tracking-[-0.02em] text-ink md:text-5xl">
           Build the set
         </h1>
       </div>
@@ -33,16 +33,16 @@ export default async function HomePage() {
       <section className="mb-10">
         <Link
           href="/plan/new"
-          className="group flex items-center gap-4 rounded-2xl bg-ember px-5 py-5 text-left transition-colors hover:bg-ember-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember md:px-6 md:py-6"
+          className="group flex items-center gap-4 rounded-3xl bg-ember px-5 py-6 text-left shadow-lift transition-colors hover:bg-ember-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ember md:gap-5 md:px-7 md:py-8"
         >
           <span
             aria-hidden
-            className="grid size-11 shrink-0 place-items-center rounded-full bg-ember-fg/15 text-ember-fg"
+            className="grid size-12 shrink-0 place-items-center rounded-full bg-ember-fg/15 text-ember-fg"
           >
             <Plus className="size-5" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block font-display text-xl text-ember-fg md:text-2xl">
+            <span className="block font-display text-2xl font-bold tracking-[-0.01em] text-ember-fg md:text-3xl">
               Create a Set
             </span>
             <span className="mt-0.5 block text-sm text-ember-fg/75">

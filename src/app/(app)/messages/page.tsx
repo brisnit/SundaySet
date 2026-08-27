@@ -29,7 +29,7 @@ export default async function MessagesPage() {
           description="When you send invitations, every message and response shows up here so you can see at a glance who still needs to reply."
         />
       ) : (
-        <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-surface">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl border border-line/70 bg-surface shadow-card">
           {messages.map((m) => (
             <li
               key={m.id}

@@ -5,7 +5,7 @@ import type * as React from "react";
 import { cn } from "@/lib/utils";
 
 const button = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-medium transition-colors disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -18,14 +18,15 @@ const button = cva(
          */
         secondary:
           "border-[0.5px] border-ember bg-surface text-ember hover:bg-ember-soft",
+        /* Tertiary / text. */
         ghost: "text-ink-muted hover:bg-sunken hover:text-ink",
         soft: "bg-ember-soft text-ember-ink hover:bg-ember-soft/70",
         /* Destructive, matching "Delete set" in the reference. */
         danger: "text-clay hover:bg-clay-soft",
       },
       size: {
-        sm: "h-8 px-3 text-sm",
-        md: "h-10 px-4 text-sm",
+        sm: "h-9 px-3.5 text-sm",
+        md: "h-11 px-5 text-sm",
         lg: "h-12 px-6 text-base",
       },
     },

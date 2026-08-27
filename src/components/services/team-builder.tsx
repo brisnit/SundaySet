@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
-import { AlertTriangle, Plus, Repeat, UserPlus, X } from "lucide-react";
+import { AlertTriangle, Plus, Repeat, UserPlus, Users, X } from "lucide-react";
 
 import {
   assignAction,
@@ -13,6 +13,7 @@ import {
 } from "@/app/(app)/plan/[serviceId]/team-actions";
 import { InviteButton } from "@/components/services/invite-button";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { findConflicts, candidateRank, type Conflict } from "@/lib/domain/scheduling";
 import { titleCase } from "@/lib/format";
@@ -154,7 +155,7 @@ export function TeamBuilder({
   ) => {
     const rows = candidatesFor(positionId).filter((c) => !excludeIds.includes(c.m.id));
     return (
-      <div className="mt-2 rounded-lg border border-line bg-surface p-2">
+      <div className="mt-2 rounded-2xl border border-line/70 bg-surface p-2 shadow-card">
         <div className="mb-1.5 flex items-center justify-between px-1">
           <p className="text-xs text-ink-subtle">
             People who play this are listed first. Nobody is hidden for a
@@ -240,12 +241,12 @@ export function TeamBuilder({
       ) : null}
 
       {slots.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-line-strong bg-sunken/50 px-5 py-10 text-center">
-          <p className="font-display text-lg text-ink">No positions set up</p>
-          <p className="mx-auto mt-1.5 max-w-sm text-sm text-ink-muted">
-            Add the roles you schedule before building a team.
-          </p>
-        </div>
+        <EmptyState
+          compact
+          icon={<Users className="size-5" />}
+          title="No positions set up"
+          description="Add the roles you schedule before building a team."
+        />
       ) : (
         <>
           <p className="text-xs text-ink-subtle">
@@ -261,10 +262,10 @@ export function TeamBuilder({
                 {rows.map((slot) => (
                   <li
                     key={slot.positionId}
-                    className="rounded-lg border border-line bg-surface px-3 py-2.5"
+                    className="rounded-xl border-[0.5px] border-line-strong/60 bg-surface px-3 py-3"
                   >
                     <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-                      <span className="w-32 shrink-0 pt-0.5 text-sm font-medium text-ink">
+                      <span className="w-32 shrink-0 pt-0.5 font-display text-sm font-semibold text-ink">
                         {slot.positionName}
                       </span>
 

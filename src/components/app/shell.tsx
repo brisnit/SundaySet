@@ -102,7 +102,7 @@ export function PageHeader({
   return (
     <div className="mb-8 flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
       <div className="min-w-0">
-        <h1 className="font-display text-3xl tracking-tight text-ink md:text-4xl">
+        <h1 className="font-display text-[28px] leading-tight font-bold tracking-[-0.02em] text-ink md:text-4xl">
           {title}
         </h1>
         {subtitle ? (

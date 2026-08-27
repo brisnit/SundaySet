@@ -43,7 +43,7 @@ export default async function TeamPage() {
   const section = (title: string, rows: typeof members) =>
     rows.length === 0 ? null : (
       <section className="mb-9">
-        <h2 className="mb-3 text-sm font-semibold tracking-wide text-ink-muted uppercase">
+        <h2 className="mb-3 text-xs font-bold tracking-[0.08em] text-ink-muted uppercase">
           {title}
         </h2>
         <ul className="grid gap-2 sm:grid-cols-2">
@@ -60,7 +60,7 @@ export default async function TeamPage() {
               <li key={m.id}>
                 <Link
                   href={`/team/${m.id}`}
-                  className="flex h-full gap-3 rounded-lg border border-line bg-surface p-4 transition-colors hover:border-line-strong"
+                  className="flex h-full gap-3 rounded-2xl border border-line/70 bg-surface p-4 shadow-card transition-shadow hover:shadow-lift"
                 >
                   <span
                     aria-hidden

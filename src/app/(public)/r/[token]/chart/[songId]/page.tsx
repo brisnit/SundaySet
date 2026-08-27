@@ -54,7 +54,7 @@ export default async function InvitationChartPage({
           href={chart.attachmentUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="mb-5 block rounded-lg border border-line bg-surface px-4 py-3 text-sm text-ember"
+          className="mb-5 block rounded-xl border-[0.5px] border-ember bg-surface px-4 py-3 text-sm font-medium text-ember"
         >
           Open the PDF chart
         </a>

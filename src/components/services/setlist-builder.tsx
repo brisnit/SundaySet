@@ -7,6 +7,7 @@ import {
   ArrowDown,
   ArrowUp,
   FileMusic,
+  ListMusic,
   Plus,
   Search,
   X,
@@ -20,6 +21,7 @@ import {
   type SetlistResult,
 } from "@/app/(app)/plan/[serviceId]/setlist-actions";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { SETLIST_KEYS } from "@/lib/validation/setlist";
 import { describeLastPlayed, daysSince } from "@/lib/domain/song-usage";
@@ -103,23 +105,22 @@ export function SetlistBuilder({
       ) : null}
 
       {rows.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-line-strong bg-sunken/50 px-5 py-10 text-center">
-          <p className="font-display text-lg text-ink">No songs yet</p>
-          <p className="mx-auto mt-1.5 max-w-sm text-sm text-ink-muted">
-            Add songs from your library and put them in the order you&rsquo;ll
-            play them.
-          </p>
-        </div>
+        <EmptyState
+          compact
+          icon={<ListMusic className="size-5" />}
+          title="No songs yet"
+          description="Add songs from your library and put them in the order you'll play them."
+        />
       ) : (
         <ol className="grid gap-2">
           {rows.map((row, i) => (
             <li
               key={row.id}
-              className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-surface px-3 py-2.5"
+              className="flex flex-wrap items-center gap-3 rounded-xl bg-sunken/60 px-3 py-3"
             >
               <span
                 aria-hidden
-                className="w-6 shrink-0 text-center font-display text-lg text-ink-subtle tabular-nums"
+                className="grid size-7 shrink-0 place-items-center rounded-lg bg-surface font-display text-sm font-bold text-ember tabular-nums shadow-card"
               >
                 {row.position}
               </span>
@@ -127,7 +128,7 @@ export function SetlistBuilder({
               <div className="min-w-40 flex-1">
                 <Link
                   href={`/songs/${row.songId}`}
-                  className="font-medium text-ink hover:text-ember hover:underline"
+                  className="font-display text-[15px] font-semibold text-ink hover:text-ember"
                 >
                   {row.title}
                 </Link>
@@ -151,7 +152,7 @@ export function SetlistBuilder({
                         setKeyAction(serviceId, row.id, e.target.value),
                       )
                     }
-                    className="h-8 rounded-lg border border-line-strong bg-surface px-2 text-sm text-ink"
+                    className="h-8 rounded-lg border-[0.5px] border-ember/40 bg-surface px-2 font-display text-sm font-semibold text-ember"
                   >
                     <option value="">Key —</option>
                     {SETLIST_KEYS.map((k) => (
@@ -221,7 +222,7 @@ export function SetlistBuilder({
 
       {canEdit ? (
         picking ? (
-          <div className="rounded-lg border border-line bg-surface p-3">
+          <div className="rounded-2xl border border-line/70 bg-surface p-3 shadow-card">
             <div className="relative mb-2">
               <Search
                 aria-hidden

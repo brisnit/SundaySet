@@ -104,7 +104,7 @@ export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
           description="Try a different search term, or clear the filters to see your whole library."
         />
       ) : (
-      <div className="overflow-hidden rounded-xl border border-line bg-surface">
+      <div className="overflow-hidden rounded-2xl border border-line/70 bg-surface shadow-card">
         <table className="w-full text-sm">
           <caption className="sr-only">
             Song library with rotation health
@@ -123,7 +123,7 @@ export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
               <tr key={s.id} className="hover:bg-sunken/60">
                 <td className="px-4 py-3">
                   <Link href={`/songs/${s.id}`} className="block">
-                    <span className="font-medium text-ink">{s.title}</span>
+                    <span className="font-display text-[15px] font-semibold text-ink">{s.title}</span>
                     {/* Genres read as quiet text on the secondary line rather
                         than more badges — a song with four of them would
                         otherwise bury the title it belongs to. */}

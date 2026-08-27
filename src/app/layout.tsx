@@ -1,13 +1,28 @@
 import type { Metadata } from "next";
-import { Fraunces, Inter } from "next/font/google";
+import { Lato, Sora } from "next/font/google";
 
 import "./globals.css";
 
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
+/**
+ * Lato carries the interface: body, labels, forms, navigation. Humanist and
+ * quiet at small sizes, which is most of this app.
+ */
+const lato = Lato({
+  variable: "--font-lato",
   subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
+  weight: ["400", "700"],
+  display: "swap",
+});
+/**
+ * Sora is the display face: page titles, key section headings, the main CTA.
+ * Geometric and confident, so it contrasts with Lato rather than echoing it.
+ * Used sparingly — everything else is Lato.
+ */
+const sora = Sora({
+  variable: "--font-sora",
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -24,7 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${fraunces.variable} h-full`}
+      className={`${lato.variable} ${sora.variable} h-full`}
       data-scroll-behavior="smooth"
     >
       <body className="flex min-h-full flex-col">{children}</body>

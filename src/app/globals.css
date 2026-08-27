@@ -44,6 +44,15 @@
   --slate-soft: #f8fafc;
 
   --radius: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+
+  /*
+   * Soft depth rather than hard borders. Two levels only: raised for primary
+   * surfaces, flat for secondary containers that sit inside them.
+   */
+  --shadow-card: 0 1px 2px rgb(16 8 24 / 0.04), 0 4px 16px rgb(16 8 24 / 0.05);
+  --shadow-lift: 0 2px 4px rgb(16 8 24 / 0.06), 0 12px 32px rgb(16 8 24 / 0.09);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -106,11 +115,15 @@
   --color-slate: var(--slate);
   --color-slate-soft: var(--slate-soft);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-sans: var(--font-lato), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sora), var(--font-lato), ui-sans-serif, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
   --radius-card: var(--radius);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --shadow-card: var(--shadow-card);
+  --shadow-lift: var(--shadow-lift);
 }
 
 @layer base {
@@ -131,7 +144,7 @@
   body {
     background-color: var(--paper);
     color: var(--ink);
-    font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    font-family: var(--font-lato), ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 

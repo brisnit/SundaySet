@@ -1,6 +1,8 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { SectionLabel } from "@/components/ui/section-label";
+import { EmptyState } from "@/components/ui/empty-state";
 import { warningsFor, type SetRow } from "@/lib/data/dashboard";
 import { formatDateChip, formatTime, setName } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -26,14 +28,10 @@ export function SetList({
 
   return (
     <section className={cn(className)}>
-      <h2 className="mb-3 text-xs font-semibold tracking-wider text-ink-muted uppercase">
-        {title}
-      </h2>
+      <SectionLabel>{title}</SectionLabel>
 
       {sets.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-line-strong bg-surface/60 px-5 py-8 text-center text-sm text-ink-muted">
-          {emptyMessage}
-        </p>
+        <EmptyState compact title="Nothing here yet" description={emptyMessage ?? ""} />
       ) : (
         <ul className="grid gap-2">
           {sets.map((s) => {
@@ -43,19 +41,19 @@ export function SetList({
               <li key={s.id}>
                 <Link
                   href={`/plan/${s.id}`}
-                  className="flex items-start gap-4 rounded-xl border border-line bg-surface px-4 py-3.5 transition-colors hover:border-line-strong"
+                  className="flex items-start gap-4 rounded-2xl border border-line/70 bg-surface px-4 py-4 shadow-card transition-shadow hover:shadow-lift md:px-5"
                 >
                   <div className="w-11 shrink-0 text-center">
-                    <p className="text-[10px] font-semibold tracking-wide text-ink-subtle">
+                    <p className="text-[10px] font-bold tracking-[0.08em] text-ember uppercase">
                       {chip.month}
                     </p>
-                    <p className="font-display text-xl leading-none text-ink">
+                    <p className="font-display text-2xl leading-none font-bold text-ink">
                       {chip.day}
                     </p>
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-ink">{setName(s)}</p>
+                    <p className="truncate font-display text-base font-semibold text-ink">{setName(s)}</p>
                     <p className="truncate text-xs text-ink-muted">
                       {formatTime(s.startTime)} · {s.songs.length} song
                       {s.songs.length === 1 ? "" : "s"} · {s.assignments.length}{" "}
