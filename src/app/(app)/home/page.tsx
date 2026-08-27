@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { Plus, Sparkles } from "lucide-react";
 
+import { FindNewMusic, type MusicCategory } from "@/components/discover/find-new-music";
+import type { CategoryArtKey } from "@/components/discover/category-art";
 import { SetList } from "@/components/sets/set-list";
 import { Button } from "@/components/ui/button";
 import { requireChurchContext } from "@/lib/auth/session";
 import { getHome } from "@/lib/data/dashboard";
+import { getMusicCategories } from "@/lib/data/discover";
 
 export const metadata = { title: "Home" };
 
@@ -16,7 +19,25 @@ export const metadata = { title: "Home" };
  */
 export default async function HomePage() {
   const ctx = await requireChurchContext();
-  const { upcoming, past } = await getHome(ctx);
+  const [{ upcoming, past }, categories] = await Promise.all([
+    getHome(ctx),
+    getMusicCategories(ctx),
+  ]);
+
+  // Only categories the artwork knows how to draw. A new Discover section
+  // without a motif is skipped rather than rendered blank.
+  const ART_KEYS = new Set<string>([
+    "for-you", "trending", "hymns", "communion", "easter", "christmas",
+  ]);
+  const musicCategories: MusicCategory[] = categories
+    .filter((c) => ART_KEYS.has(c.key))
+    .map((c) => ({
+      key: c.key as CategoryArtKey,
+      title: c.title,
+      blurb: c.blurb,
+      count: c.count,
+      href: `/songs/discover#${c.key}`,
+    }));
 
   const firstName = (ctx.user.name ?? "").split(" ")[0] || "there";
 
@@ -60,6 +81,10 @@ export default async function HomePage() {
           </Button>
         </div>
       </section>
+
+      {musicCategories.length > 0 ? (
+        <FindNewMusic categories={musicCategories} />
+      ) : null}
 
       <SetList
         title="Current & Upcoming"

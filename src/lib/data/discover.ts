@@ -1,5 +1,7 @@
 import "server-only";
 
+import { cache } from "react";
+
 import type { SongType } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import {
@@ -99,7 +101,7 @@ export type DiscoverSection = {
   songs: DiscoverSong[];
 };
 
-export async function getDiscover(ctx: ChurchContext) {
+export const getDiscover = cache(async function getDiscover(ctx: ChurchContext) {
   const all = await scored(ctx);
   const fresh = all.filter((s) => !s.inLibrary);
 
@@ -144,4 +146,43 @@ export async function getDiscover(ctx: ChurchContext) {
   const hot = [...fresh].sort((a, b) => b.score - a.score)[0];
 
   return { sections, hot };
+});
+
+/**
+ * The Find new music rail on Home.
+ *
+ * Derived from getDiscover rather than recounted, so the number on a card is
+ * exactly how many songs are in the row it opens. Recomputing it separately
+ * would drift the moment either set of rules changed. getDiscover is memoized
+ * per request, so rendering both costs one pass.
+ */
+export type MusicCategorySummary = {
+  key: string;
+  title: string;
+  blurb: string;
+  count: number;
+};
+
+export async function getMusicCategories(
+  ctx: ChurchContext,
+): Promise<MusicCategorySummary[]> {
+  const { sections } = await getDiscover(ctx);
+
+  const BLURBS: Record<string, string> = {
+    "for-you": "Matched to what you already play",
+    trending: "Picking up everywhere right now",
+    hymns: "Old words, current arrangements",
+    communion: "Quiet enough to serve under",
+    easter: "For the weeks around Easter",
+    christmas: "Advent through Christmas",
+  };
+
+  const TITLES: Record<string, string> = { "for-you": "For you" };
+
+  return sections.map((s) => ({
+    key: s.key,
+    title: TITLES[s.key] ?? s.title,
+    blurb: BLURBS[s.key] ?? "",
+    count: s.songs.length,
+  }));
 }

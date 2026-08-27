@@ -130,7 +130,7 @@ export default async function DiscoverPage() {
       ) : null}
 
       {sections.map((section) => (
-        <section key={section.key} className="mb-9">
+        <section key={section.key} id={section.key} className="mb-9 scroll-mt-6">
           <h2 className="text-sm font-semibold tracking-wide text-ink-muted uppercase">
             {section.title}
           </h2>
