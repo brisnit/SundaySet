@@ -87,6 +87,16 @@
     --slate: #94a3b8;
     --slate-soft: #14181d;
   }
+
+  /*
+   * The wordmark is a near-black PNG, which disappears against the dark
+   * surface. Knocking it to pure white keeps the lettering exactly as drawn
+   * rather than tinting it — an `invert` alone would turn the dark purple
+   * into a washed-out cyan.
+   */
+  .brand-logo {
+    filter: brightness(0) invert(1);
+  }
 }
 
 @theme inline {

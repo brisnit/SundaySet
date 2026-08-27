@@ -29,10 +29,10 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <Image
             src="/brand/setmeister-logo.png"
             alt="SetMeister"
-            width={181}
+            width={130}
             height={31}
             priority
-            className="mx-auto h-7 w-auto"
+            className="brand-logo mx-auto h-7 w-auto"
           />
           <p className="mt-1.5 text-sm text-ink-muted">
             Build the set. Schedule the team. Get Sunday ready.
