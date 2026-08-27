@@ -1096,3 +1096,53 @@ Next.js runtime.
 - **No decline reason** — no field exists and `Assignment.notes` belongs to the planner.
 - **No hard delete for team members** — deactivate only, to preserve assignment history.
 - **Multiple people per position** is allowed because the schema allows it.
+
+## 28. Account settings (commit `127d11d`)
+
+`/settings` is now the account page, not just a workspace readout.
+
+**Editable:** name, phone, monogram colour, optional photo. **Read-only, on
+purpose:** role and email, each shown with the reason.
+
+- Role lives on `Membership`. A self-service role field would be privilege
+  escalation — a MUSICIAN could make themselves OWNER. Role changes belong in
+  member management, behind `members:manage`.
+- Email is the sign-in identifier; changing it needs a verification round-trip.
+
+**The monogram colour exists because blob storage is not configured.** An
+account can change how it looks with no file storage at all. The photo upload
+form only renders when `storageStatus().available` is true, and production
+currently shows "Photo uploads need file storage configured" instead. Wiring
+`BLOB_READ_WRITE_TOKEN` turns it on with no code change.
+
+**Files:** `src/lib/validation/account.ts` (palette + schema),
+`src/lib/data/account.ts`, `src/app/(app)/settings/actions.ts`,
+`src/components/account/account-form.tsx`, `src/components/ui/avatar.tsx`.
+
+**Invariant, tested in `tests/account.test.ts`:** no function in
+`lib/data/account.ts` accepts a user id. They all resolve `ctx.userId`, so one
+account can never edit another. A test asserts that across two workspaces.
+
+`ChurchContext.user` now carries `avatarColor`, so the sidebar and mobile
+header render the chosen icon via the shared `Avatar`.
+
+**Migration `20260827030027_account_profile_fields`** — additive only: two
+nullable columns (`avatarColor`, `phone`) on `User`. Applied to production by
+the Vercel build; 60 songs and 13 sets verified intact afterwards.
+
+### Also in this commit
+
+- Card icons (Setlist, Details, Team, Blockouts) use the primary colour.
+- **Fixed a dead button.** Both "Add team member" controls set a `picking`
+  state that nothing rendered, so clicking did nothing and a set with no team
+  had no way to get one. The two-step chooser now renders outside the slot
+  list — it has to, because a slot only exists once somebody is in it.
+
+### Testing server actions with curl
+
+A `useActionState` action cannot be invoked by posting its `$ACTION_ID`. It
+needs the progressive-enhancement fields exactly as rendered: `$ACTION_REF_n`,
+`$ACTION_n:0`, `$ACTION_n:1`, `$ACTION_KEY`. Posting the bare action id returns
+303 or "Connection closed." and writes nothing — which looks like a product bug
+and is not. Scrape the hidden inputs from the page first. Also use
+`--form-string`, not `-F`: `-F` mangles parentheses in phone numbers.
