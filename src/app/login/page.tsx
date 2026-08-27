@@ -32,7 +32,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
             width={130}
             height={31}
             priority
-            className="brand-logo mx-auto h-7 w-auto"
+            unoptimized
+            className="brand-logo mx-auto h-9 w-auto"
           />
           <p className="mt-1.5 text-sm text-ink-muted">
             Build the set. Schedule the team. Get Sunday ready.

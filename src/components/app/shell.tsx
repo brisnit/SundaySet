@@ -23,7 +23,8 @@ export function AppShell({
             width={130}
             height={31}
             priority
-            className="brand-logo h-6 w-auto"
+            unoptimized
+            className="brand-logo h-8 w-auto"
           />
         </Link>
 
@@ -54,7 +55,8 @@ export function AppShell({
               width={130}
               height={31}
               priority
-              className="brand-logo h-6 w-auto"
+              unoptimized
+              className="brand-logo h-8 w-auto"
             />
           </Link>
 

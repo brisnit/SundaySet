@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useState } from "react";
-import { ArrowLeftRight, GripVertical, Plus, Trash2 } from "lucide-react";
+import { ArrowLeftRight, GripVertical, Plus, Trash2, Undo2 } from "lucide-react";
 
 import type { FormState } from "@/app/(app)/songs/actions";
 import { Button } from "@/components/ui/button";
@@ -42,27 +42,38 @@ export function ChartEditor({
       : [{ label: "Verse 1", type: "VERSE", body: "" }],
   );
   const [key, setKey] = useState(initialKey);
-  const [moveTo, setMoveTo] = useState("");
-  const [moved, setMoved] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  /** The state before the last transpose, so it can be put straight back. */
+  const [undo, setUndo] = useState<
+    { key: string; sections: EditorSection[] } | null
+  >(null);
 
   /**
    * Rewrite the chart into another key for good.
    *
    * This is the deliberate one — it changes what is stored, unlike a set
-   * playing the song in a different key, which only changes how it is shown.
-   * Nothing is written until Save, so it can be undone by leaving the page.
+   * playing the song in another key, which only changes how it is shown.
+   * Nothing reaches the database until Save, and Undo puts it back before
+   * then, so there are two ways out of a mistake.
    */
-  const changeKey = () => {
-    const semitones = semitonesBetween(key, moveTo);
+  const changeKey = (to: string) => {
+    const semitones = semitonesBetween(key, to);
     if (semitones === null) return;
 
-    const spelling = spellingForKey(moveTo);
+    const spelling = spellingForKey(to);
+    setUndo({ key, sections });
     setSections((current) =>
       current.map((s) => ({ ...s, body: transposeChartText(s.body, semitones, spelling) })),
     );
-    setMoved(key);
-    setKey(moveTo);
-    setMoveTo("");
+    setKey(to);
+    setPicking(false);
+  };
+
+  const undoChangeKey = () => {
+    if (!undo) return;
+    setSections(undo.sections);
+    setKey(undo.key);
+    setUndo(null);
   };
 
   const update = (i: number, patch: Partial<EditorSection>) =>
@@ -106,39 +117,63 @@ export function ChartEditor({
           </div>
 
           {/* Rewriting the chart itself, as opposed to a set playing it in
-              another key — which needs no rewriting at all. */}
+              another key — which needs no rewriting at all.
+
+              One tap opens the keys, a second applies one. The previous
+              version put a disabled button next to a separate dropdown, so
+              tapping the button before choosing a key did nothing at all. */}
           <div className="border-t border-line pt-4">
-            <p className="mb-2 text-sm font-medium text-ink">Transpose this chart</p>
-            <div className="flex flex-wrap items-end gap-2">
-              <Field label="Move to" htmlFor="moveTo" className="w-36">
-                <Select
-                  id="moveTo"
-                  value={moveTo}
-                  onChange={(e) => setMoveTo(e.target.value)}
-                >
-                  <option value="">Choose a key</option>
-                  {SETLIST_KEYS.map((k) => (
-                    <option key={k} value={k}>{k}</option>
-                  ))}
-                </Select>
-              </Field>
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!key.trim() || !moveTo || moveTo === key}
-                onClick={changeKey}
-                className="mb-0.5"
-              >
-                <ArrowLeftRight aria-hidden />
-                Rewrite the chords
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-medium text-ink">Transpose this chart</p>
+              {undo ? (
+                <Button type="button" variant="ghost" size="sm" onClick={undoChangeKey}>
+                  <Undo2 aria-hidden />
+                  Undo
+                </Button>
+              ) : null}
             </div>
+
+            {!key.trim() ? (
+              <p className="mt-1.5 text-xs text-ink-subtle">
+                Give the chart a key first, so SetMeister knows what it is
+                moving from.
+              </p>
+            ) : picking ? (
+              <div className="mt-2 rounded-2xl border border-line/70 bg-surface p-3 shadow-card">
+                <p className="mb-2 px-0.5 text-xs text-ink-subtle">
+                  Rewrite every chord from {key} into:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {SETLIST_KEYS.filter((k) => k !== key).map((k) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => changeKey(k)}
+                      className="min-w-11 rounded-full border-[0.5px] border-ember px-3 py-2 font-display text-sm font-semibold text-ember transition-colors hover:bg-ember-soft"
+                    >
+                      {k}
+                    </button>
+                  ))}
+                </div>
+                <div className="mt-2 flex justify-end border-t border-line pt-2">
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setPicking(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2">
+                <Button type="button" variant="secondary" onClick={() => setPicking(true)}>
+                  <ArrowLeftRight aria-hidden />
+                  Change the key of this chart
+                </Button>
+              </div>
+            )}
+
             <p className="mt-1.5 text-xs text-ink-subtle">
-              {key.trim()
-                ? moved
-                  ? `Rewritten from ${moved} to ${key}. Save to keep it.`
-                  : "Changes the saved chart. To play one set in another key, set the key on that set instead."
-                : "Set the chart’s key first, so SetMeister knows where it is moving from."}
+              {undo
+                ? `Rewritten from ${undo.key} to ${key}. Save to keep it.`
+                : "This changes the saved chart. To play one set in another key, set the key on that set instead — the chart stays as it is."}
             </p>
           </div>
         </CardBody>

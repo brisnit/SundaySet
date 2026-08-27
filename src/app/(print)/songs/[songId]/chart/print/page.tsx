@@ -75,14 +75,43 @@ export default async function ChartPrintPage({
         <Link href={`/songs/${songId}`} className="text-ember hover:underline">
           ← Back to song
         </Link>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           {sections.length > 0 && displayKey ? (
-            <Link
-              href={linkWith({ numbers: showNumbers ? null : "1" })}
-              className="text-ember hover:underline"
+            /*
+             * A segmented toggle rather than a link, because it is a view
+             * switch with two states and the reader needs to see which one
+             * they are in without reading the chart to work it out.
+             */
+            <div
+              role="group"
+              aria-label="Chart notation"
+              className="inline-flex rounded-full border-[0.5px] border-ember/40 bg-surface p-0.5"
             >
-              {showNumbers ? "Show chords" : "Show numbers"}
-            </Link>
+              <Link
+                href={linkWith({ numbers: null })}
+                aria-current={!showNumbers ? "true" : undefined}
+                className={
+                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors " +
+                  (!showNumbers
+                    ? "bg-ember text-ember-fg"
+                    : "text-ember hover:bg-ember-soft")
+                }
+              >
+                Chords
+              </Link>
+              <Link
+                href={linkWith({ numbers: "1" })}
+                aria-current={showNumbers ? "true" : undefined}
+                className={
+                  "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors " +
+                  (showNumbers
+                    ? "bg-ember text-ember-fg"
+                    : "text-ember hover:bg-ember-soft")
+                }
+              >
+                Numbers
+              </Link>
+            </div>
           ) : null}
           <span className="text-ink-subtle">
             Use your browser&rsquo;s Print to save a PDF
