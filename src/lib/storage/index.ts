@@ -20,27 +20,45 @@ export type StoredFile = {
   sizeBytes: number;
 };
 
+export type UploadKind = "chart" | "image";
+
 export type StorageAdapter = {
   readonly name: string;
-  put(file: File, keyPrefix: string): Promise<StoredFile>;
+  put(file: File, keyPrefix: string, kind?: UploadKind): Promise<StoredFile>;
   remove(url: string): Promise<void>;
 };
 
 export const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
 export const ALLOWED_UPLOAD_TYPES = ["application/pdf"] as const;
 
+/** What each kind of upload accepts, and the limit that suits it. */
+const RULES: Record<UploadKind, { types: readonly string[]; max: number; label: string }> = {
+  chart: {
+    types: ALLOWED_UPLOAD_TYPES,
+    max: MAX_UPLOAD_BYTES,
+    label: "Chord charts must be PDF files.",
+  },
+  image: {
+    types: ["image/jpeg", "image/png", "image/webp"],
+    // Avatars are displayed at 96px at most; multi-megabyte photos are waste.
+    max: 4 * 1024 * 1024,
+    label: "Photos must be JPEG, PNG or WebP.",
+  },
+};
+
 export class UploadError extends Error {}
 
 /** Shared validation, so every adapter enforces the same rules. */
-export function assertUploadable(file: File) {
+export function assertUploadable(file: File, kind: UploadKind = "chart") {
+  const rule = RULES[kind];
   if (file.size === 0) throw new UploadError("That file is empty.");
-  if (file.size > MAX_UPLOAD_BYTES) {
+  if (file.size > rule.max) {
     throw new UploadError(
-      `That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. The limit is 8MB.`,
+      `That file is ${(file.size / 1024 / 1024).toFixed(1)}MB. The limit is ${Math.round(rule.max / 1024 / 1024)}MB.`,
     );
   }
-  if (!ALLOWED_UPLOAD_TYPES.includes(file.type as (typeof ALLOWED_UPLOAD_TYPES)[number])) {
-    throw new UploadError("Chord charts must be PDF files.");
+  if (!rule.types.includes(file.type)) {
+    throw new UploadError(rule.label);
   }
 }
 
@@ -48,8 +66,8 @@ const LOCAL_DIR = path.join(process.cwd(), ".uploads");
 
 const localStorage: StorageAdapter = {
   name: "local-dev-disk",
-  async put(file, keyPrefix) {
-    assertUploadable(file);
+  async put(file, keyPrefix, kind = "chart") {
+    assertUploadable(file, kind);
     const id = randomUUID();
     // Separators are stripped, dot runs collapsed and leading dots removed, so
     // the stored name can never be a traversal fragment. The serving route
@@ -81,8 +99,8 @@ const localStorage: StorageAdapter = {
 
 const blobStorage: StorageAdapter = {
   name: "vercel-blob",
-  async put(file, keyPrefix) {
-    assertUploadable(file);
+  async put(file, keyPrefix, kind = "chart") {
+    assertUploadable(file, kind);
     const { put } = await import("@vercel/blob");
     const result = await put(`${keyPrefix}/${file.name}`, file, {
       access: "public",

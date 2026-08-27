@@ -12,7 +12,13 @@ import { AuthorizationError, can, type Permission } from "@/lib/auth/roles";
  */
 export type ChurchContext = {
   userId: string;
-  user: { id: string; name: string | null; email: string; image: string | null };
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+    avatarColor: string | null;
+  };
   churchId: string;
   church: { id: string; name: string; slug: string; timezone: string; logoUrl: string | null };
   role: Role;
@@ -51,7 +57,15 @@ export const getChurchContext = cache(async (): Promise<ChurchContext | null> =>
     where: { userId, status: "ACTIVE" },
     include: {
       church: { select: { id: true, name: true, slug: true, timezone: true, logoUrl: true } },
-      user: { select: { id: true, name: true, email: true, image: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          avatarColor: true,
+        },
+      },
     },
   });
   if (memberships.length === 0) return null;

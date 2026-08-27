@@ -64,7 +64,7 @@ async function seedChurch(slug: string, name: string): Promise<Fixture> {
   return {
     ctx: {
       userId: user.id,
-      user: { id: user.id, name: user.name, email: user.email, image: null },
+      user: { id: user.id, name: user.name, email: user.email, image: null, avatarColor: null },
       churchId: church.id,
       church: {
         id: church.id,

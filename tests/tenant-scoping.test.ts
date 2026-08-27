@@ -105,7 +105,7 @@ const THEIRS = "church_someone_else";
 
 const ctx = {
   userId: "user_1",
-  user: { id: "user_1", name: "Britt", email: "b@example.com", image: null },
+  user: { id: "user_1", name: "Britt", email: "b@example.com", image: null, avatarColor: null },
   churchId: OURS,
   church: {
     id: OURS,

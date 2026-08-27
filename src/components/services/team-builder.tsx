@@ -278,6 +278,25 @@ export function TeamBuilder({
     );
   };
 
+  /**
+   * The two-step "add team member" flow: pick the spot, then pick the person.
+   * It lives outside the slot list because a brand-new set has no slots yet —
+   * a slot only exists once somebody is in it.
+   */
+  const addFlow = () => {
+    if (picking === "choose-position") return positionChooser();
+    if (picking?.startsWith("pos:")) {
+      const positionId = picking.slice(4);
+      const existing = slots.find((s) => s.positionId === positionId);
+      return picker(
+        positionId,
+        (memberId) => run(() => assignAction(serviceId, memberId, positionId)),
+        existing?.assignments.map((a) => a.teamMemberId) ?? [],
+      );
+    }
+    return null;
+  };
+
   const byCategory = slots.reduce<Record<string, TeamSlotView[]>>((acc, s) => {
     (acc[s.category] ??= []).push(s);
     return acc;
@@ -317,6 +336,7 @@ export function TeamBuilder({
                 <UserPlus aria-hidden />
                 Add team member
               </Button>
+              {addFlow()}
             </div>
           ) : null}
         </>
@@ -459,6 +479,7 @@ export function TeamBuilder({
                 <UserPlus aria-hidden />
                 Add team member
               </Button>
+              {addFlow()}
             </div>
           ) : null}
         </>

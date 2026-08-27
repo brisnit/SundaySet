@@ -44,7 +44,7 @@ async function makeChurch(slug: string) {
   });
   const ctx: ChurchContext = {
     userId: user.id,
-    user: { id: user.id, name: null, email: user.email, image: null },
+    user: { id: user.id, name: null, email: user.email, image: null, avatarColor: null },
     churchId: church.id,
     church: {
       id: church.id, name: church.name, slug: church.slug,

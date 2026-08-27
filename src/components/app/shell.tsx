@@ -2,9 +2,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type * as React from "react";
 
-import { UserRound } from "lucide-react";
-
 import { MobileNav, Nav } from "@/components/app/nav";
+import { Avatar } from "@/components/ui/avatar";
 import type { ChurchContext } from "@/lib/auth/session";
 
 export function AppShell({
@@ -14,13 +13,6 @@ export function AppShell({
   ctx: ChurchContext;
   children: React.ReactNode;
 }) {
-  const initials = (ctx.user.name ?? ctx.user.email)
-    .split(" ")
-    .map((p) => p[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
-
   return (
     <div className="flex min-h-full">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
@@ -43,12 +35,12 @@ export function AppShell({
           href="/settings"
           className="mt-4 flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-ink-muted hover:bg-sunken hover:text-ink"
         >
-          <span
-            aria-hidden
-            className="grid size-7 shrink-0 place-items-center rounded-full bg-ember-soft text-[11px] font-semibold text-ember-ink"
-          >
-            {initials}
-          </span>
+          <Avatar
+            name={ctx.user.name ?? ctx.user.email}
+            image={ctx.user.image}
+            color={ctx.user.avatarColor}
+            size={28}
+          />
           <span className="truncate">{ctx.user.name ?? ctx.user.email}</span>
         </Link>
       </aside>
@@ -69,9 +61,14 @@ export function AppShell({
           <Link
             href="/settings"
             aria-label={`Account — ${ctx.user.name ?? ctx.user.email}`}
-            className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-paper"
+            className="shrink-0 rounded-full ring-1 ring-line"
           >
-            <UserRound aria-hidden className="size-5" />
+            <Avatar
+              name={ctx.user.name ?? ctx.user.email}
+              image={ctx.user.image}
+              color={ctx.user.avatarColor}
+              size={36}
+            />
           </Link>
         </header>
 

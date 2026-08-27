@@ -149,7 +149,7 @@ export default async function TeamMemberPage({
           {upcomingBlockouts.length > 0 ? (
             <Card>
               <CardHeader className="flex items-center gap-2">
-                <CalendarOff aria-hidden className="size-4 text-ink-subtle" />
+                <CalendarOff aria-hidden className="size-4 text-ember" />
                 <CardTitle>Unavailable</CardTitle>
               </CardHeader>
               <CardBody>

@@ -111,7 +111,7 @@ export default async function ServiceDetailPage({
           <Card>
             <CardHeader className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <ListMusic aria-hidden className="size-4 text-ink-subtle" />
+                <ListMusic aria-hidden className="size-4 text-ember" />
                 <CardTitle>Setlist</CardTitle>
               </div>
               {setlist.length > 0 ? (
@@ -139,7 +139,7 @@ export default async function ServiceDetailPage({
           <Card>
             <CardHeader className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <Users aria-hidden className="size-4 text-ink-subtle" />
+                <Users aria-hidden className="size-4 text-ember" />
                 <CardTitle>Team</CardTitle>
               </div>
               {service.assignments.length > 0 ? (
@@ -179,7 +179,7 @@ export default async function ServiceDetailPage({
         <div className="lg:col-span-2 grid gap-5">
           <Card>
             <CardHeader className="flex items-center gap-2">
-              <CalendarDays aria-hidden className="size-4 text-ink-subtle" />
+              <CalendarDays aria-hidden className="size-4 text-ember" />
               <CardTitle>Details</CardTitle>
             </CardHeader>
             <CardBody>
