@@ -17,7 +17,7 @@ export function DeleteServiceButton({
 
   return (
     <Button
-      variant="ghost"
+      variant="danger"
       size="sm"
       disabled={pending}
       onClick={() => {

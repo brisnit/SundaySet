@@ -23,11 +23,16 @@
   --line: #e5e5e5;
   --line-strong: #d4d4d4;
 
-  --ember: #111111;
-  --ember-hover: #000000;
-  --ember-soft: #f4f4f5;
-  --ember-ink: #111111;
+  --ember: #370061;
+  --ember-hover: #2a004a;
+  --ember-soft: #f4eefa;
+  --ember-ink: #370061;
   --ember-fg: #ffffff;
+
+  --accent: #8b42c2;
+  --accent-soft: #f3e9fa;
+  /* Deselected navigation icons. */
+  --nav-idle: #c3b0d2;
 
   --sage: #15803d;
   --sage-soft: #f0fdf4;
@@ -52,12 +57,17 @@
     --line: #262626;
     --line-strong: #383838;
 
-    /* The accent inverts to white so it still reads as "primary action". */
-    --ember: #fafafa;
-    --ember-hover: #ffffff;
-    --ember-soft: #1f1f1f;
-    --ember-ink: #fafafa;
-    --ember-fg: #0a0a0a;
+    /* #370061 is far too dark to read on a dark ground, so the lighter brand
+       purple becomes the accent and keeps white text. */
+    --ember: #8b42c2;
+    --ember-hover: #9d5ad0;
+    --ember-soft: #241033;
+    --ember-ink: #cda9e8;
+    --ember-fg: #ffffff;
+
+    --accent: #a86ad6;
+    --accent-soft: #241033;
+    --nav-idle: #6b5a7a;
 
     --sage: #4ade80;
     --sage-soft: #0d1f14;
@@ -84,6 +94,9 @@
   --color-ember-soft: var(--ember-soft);
   --color-ember-ink: var(--ember-ink);
   --color-ember-fg: var(--ember-fg);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-nav-idle: var(--nav-idle);
   --color-sage: var(--sage);
   --color-sage-soft: var(--sage-soft);
   --color-amber: var(--amber);

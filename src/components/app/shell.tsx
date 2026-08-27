@@ -1,5 +1,8 @@
+import Image from "next/image";
 import Link from "next/link";
 import type * as React from "react";
+
+import { UserRound } from "lucide-react";
 
 import { MobileNav, Nav } from "@/components/app/nav";
 import type { ChurchContext } from "@/lib/auth/session";
@@ -21,10 +24,15 @@ export function AppShell({
   return (
     <div className="flex min-h-full">
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r border-line bg-surface px-3 py-5 md:flex">
-        <Link href="/home" className="mb-7 px-3">
-          <span className="font-display text-xl font-semibold tracking-tight text-ink">
-            SetMeister
-          </span>
+        <Link href="/home" className="mb-7 px-3" aria-label="SetMeister home">
+          <Image
+            src="/brand/setmeister-logo.png"
+            alt="SetMeister"
+            width={180}
+            height={28}
+            priority
+            className="h-6 w-auto"
+          />
         </Link>
 
         <div className="flex flex-1 flex-col gap-0.5">
@@ -47,8 +55,23 @@ export function AppShell({
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-line bg-surface px-4 py-3 md:hidden">
-          <Link href="/home" className="font-display text-lg font-semibold">
-            SetMeister
+          <Link href="/home" aria-label="SetMeister home">
+            <Image
+              src="/brand/setmeister-logo.png"
+              alt="SetMeister"
+              width={180}
+              height={28}
+              priority
+              className="h-6 w-auto"
+            />
+          </Link>
+
+          <Link
+            href="/settings"
+            aria-label={`Account — ${ctx.user.name ?? ctx.user.email}`}
+            className="grid size-9 shrink-0 place-items-center rounded-full bg-ink text-paper"
+          >
+            <UserRound aria-hidden className="size-5" />
           </Link>
         </header>
 

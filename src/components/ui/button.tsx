@@ -10,10 +10,18 @@ const button = cva(
     variants: {
       variant: {
         primary: "bg-ember text-ember-fg hover:bg-ember-hover",
+        /*
+         * The brand's hairline-stroked button: white ground, fine primary
+         * stroke, primary label. Specified as a 0.25 stroke — 0.25px rounds
+         * away to nothing on a 1x display, so 0.5px is used: a true hairline on
+         * the 2x/3x screens this is designed for, and still visible elsewhere.
+         */
         secondary:
-          "border border-line-strong bg-surface text-ink hover:bg-sunken",
+          "border-[0.5px] border-ember bg-surface text-ember hover:bg-ember-soft",
         ghost: "text-ink-muted hover:bg-sunken hover:text-ink",
         soft: "bg-ember-soft text-ember-ink hover:bg-ember-soft/70",
+        /* Destructive, matching "Delete set" in the reference. */
+        danger: "text-clay hover:bg-clay-soft",
       },
       size: {
         sm: "h-8 px-3 text-sm",

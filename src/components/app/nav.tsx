@@ -44,7 +44,13 @@ export function Nav() {
               : "text-ink-muted hover:bg-sunken hover:text-ink",
           )}
         >
-          <Icon className="size-4 shrink-0" aria-hidden />
+          <Icon
+            className={cn(
+              "size-4 shrink-0",
+              isActive(href) ? "text-ember" : "text-nav-idle",
+            )}
+            aria-hidden
+          />
           {label}
         </Link>
       ))}
@@ -59,7 +65,13 @@ export function Nav() {
             : "text-ember hover:bg-ember-soft/60",
         )}
       >
-        <AI_LINK.icon className="size-4 shrink-0" aria-hidden />
+        <AI_LINK.icon
+          className={cn(
+            "size-4 shrink-0",
+            isActive(AI_LINK.href) ? "text-ember" : "text-nav-idle",
+          )}
+          aria-hidden
+        />
         {AI_LINK.label}
       </Link>
     </nav>
@@ -89,7 +101,13 @@ export function MobileNav() {
             isActive(href) ? "text-ember" : "text-ink-subtle",
           )}
         >
-          <Icon className="size-5 shrink-0" aria-hidden />
+          <Icon
+            className={cn(
+              "size-5 shrink-0",
+              isActive(href) ? "text-ember" : "text-nav-idle",
+            )}
+            aria-hidden
+          />
           <span className="truncate">{label}</span>
         </Link>
       ))}

@@ -34,7 +34,7 @@ export function SongActions({
         {retired ? "Restore" : "Retire"}
       </Button>
       <Button
-        variant="ghost"
+        variant="danger"
         size="sm"
         disabled={pending}
         onClick={() => {
