@@ -14,11 +14,11 @@ export default function Loading() {
         <Skeleton className="h-6 w-28 rounded-full" />
       </div>
       <div className="grid gap-5 lg:grid-cols-5">
-        <div className="grid gap-5 lg:col-span-3">
+        <div className="min-w-0 grid gap-5 lg:col-span-3">
           <Skeleton className="h-64 rounded-xl" />
           <Skeleton className="h-72 rounded-xl" />
         </div>
-        <div className="grid gap-5 lg:col-span-2">
+        <div className="min-w-0 grid gap-5 lg:col-span-2">
           <Skeleton className="h-56 rounded-xl" />
           <Skeleton className="h-32 rounded-xl" />
         </div>

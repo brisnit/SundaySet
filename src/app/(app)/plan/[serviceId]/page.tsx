@@ -107,7 +107,7 @@ export default async function ServiceDetailPage({
       </div>
 
       <div className="grid gap-5 lg:grid-cols-5">
-        <div className="lg:col-span-3 grid gap-5">
+        <div className="min-w-0 lg:col-span-3 grid gap-5">
           <Card>
             <CardHeader className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
@@ -176,7 +176,7 @@ export default async function ServiceDetailPage({
           </Card>
         </div>
 
-        <div className="lg:col-span-2 grid gap-5">
+        <div className="min-w-0 lg:col-span-2 grid gap-5">
           <Card>
             <CardHeader className="flex items-center gap-2">
               <CalendarDays aria-hidden className="size-4 text-ember" />

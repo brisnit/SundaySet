@@ -117,7 +117,7 @@ export default async function TeamMemberPage({
       </div>
 
       <div className="grid gap-5 lg:grid-cols-5">
-        <div className="lg:col-span-3 grid gap-5">
+        <div className="min-w-0 lg:col-span-3 grid gap-5">
           <Card>
             <CardHeader>
               <CardTitle>Positions</CardTitle>
@@ -189,7 +189,7 @@ export default async function TeamMemberPage({
           ) : null}
         </div>
 
-        <div className="lg:col-span-2 grid gap-5">
+        <div className="min-w-0 lg:col-span-2 grid gap-5">
           <Card>
             <CardHeader>
               <CardTitle>Contact</CardTitle>

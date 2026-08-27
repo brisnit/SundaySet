@@ -20,8 +20,8 @@ export function AppShell({
           <Image
             src="/brand/setmeister-logo.png"
             alt="SetMeister"
-            width={180}
-            height={28}
+            width={181}
+            height={31}
             priority
             className="h-6 w-auto"
           />
@@ -51,8 +51,8 @@ export function AppShell({
             <Image
               src="/brand/setmeister-logo.png"
               alt="SetMeister"
-              width={180}
-              height={28}
+              width={181}
+              height={31}
               priority
               className="h-6 w-auto"
             />

@@ -1,8 +1,10 @@
-import { Building2, UserRound } from "lucide-react";
+import { Building2, LogOut, UserRound } from "lucide-react";
 
 import { PageHeader } from "@/components/app/shell";
 import { AccountForm } from "@/components/account/account-form";
+import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/card";
+import { signOutAction } from "./actions";
 import { requireChurchContext } from "@/lib/auth/session";
 import { getAccount } from "@/lib/data/account";
 import { titleCase } from "@/lib/format";
@@ -29,7 +31,7 @@ export default async function SettingsPage() {
       <PageHeader title="Settings" subtitle={account.email} />
 
       <div className="grid gap-5 lg:grid-cols-5">
-        <div className="lg:col-span-3">
+        <div className="min-w-0 lg:col-span-3">
           <AccountForm
             uploadsEnabled={storageStatus().available}
             values={{
@@ -43,7 +45,7 @@ export default async function SettingsPage() {
           />
         </div>
 
-        <div className="grid gap-5 lg:col-span-2">
+        <div className="min-w-0 grid gap-5 lg:col-span-2">
           <Card>
             <CardHeader className="flex items-center gap-2">
               <UserRound aria-hidden className="size-4 text-ember" />
@@ -78,6 +80,17 @@ export default async function SettingsPage() {
             </CardBody>
           </Card>
         </div>
+      </div>
+
+      {/* Sign out sits at the very foot of the page, under everything else. */}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-5">
+        <p className="text-sm text-ink-muted">Signed in as {account.email}</p>
+        <form action={signOutAction}>
+          <Button type="submit" variant="secondary">
+            <LogOut aria-hidden />
+            Sign out
+          </Button>
+        </form>
       </div>
     </>
   );

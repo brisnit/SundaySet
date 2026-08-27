@@ -2,11 +2,10 @@
 
 import { useActionState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, LogOut, Trash2, Upload } from "lucide-react";
+import { Check, Trash2, Upload } from "lucide-react";
 
 import {
   removeAvatarAction,
-  signOutAction,
   updateAccountAction,
   uploadAvatarAction,
   type FormState,
@@ -190,23 +189,6 @@ export function AccountForm({
               works either way.
             </p>
           )}
-        </CardBody>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Sign out</CardTitle>
-        </CardHeader>
-        <CardBody className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-ink-muted">
-            Signed in as {values.email}
-          </p>
-          <form action={signOutAction}>
-            <Button type="submit" variant="secondary">
-              <LogOut aria-hidden />
-              Sign out
-            </Button>
-          </form>
         </CardBody>
       </Card>
     </div>

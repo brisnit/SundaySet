@@ -357,70 +357,87 @@ export function TeamBuilder({
                     key={slot.positionId}
                     className="rounded-xl border-[0.5px] border-line-strong/60 bg-surface px-3 py-3"
                   >
+                    {/*
+                      The actions are their own shrink-0 group so they can never
+                      sit on top of the name — previously they were siblings of
+                      the name on one wrapping line, so a long single-word
+                      surname could not wrap and ran underneath the invite
+                      button.
+
+                      Everything still wraps. A non-wrapping row would make this
+                      card's min-content the SUM of its children, which is wider
+                      than the 3/5 column it lives in — the card would then
+                      overflow and sit under the Details column.
+                    */}
                     <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
-                      <span className="w-32 shrink-0 pt-0.5 font-display text-sm font-semibold text-ink">
+                      <span className="w-full shrink-0 pt-0.5 font-display text-sm font-semibold text-ink sm:w-32">
                         {slot.positionName}
                       </span>
 
-                      <div className="min-w-40 flex-1">
+                      <div className="min-w-0 flex-1">
                         {slot.assignments.length === 0 ? (
                           <span className="text-sm text-ink-subtle">Open</span>
                         ) : (
-                          <ul className="grid gap-1.5">
+                          <ul className="grid gap-2">
                             {slot.assignments.map((a) => (
-                              <li key={a.id} className="flex flex-wrap items-start gap-2">
-                                <span className="min-w-0 flex-1">
-                                  <span className="flex flex-wrap items-center gap-1.5">
+                              <li
+                                key={a.id}
+                                className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5"
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
                                     <Link
                                       href={`/team/${a.teamMemberId}`}
-                                      className="text-sm text-ink hover:text-ember hover:underline"
+                                      className="text-sm break-words text-ink hover:text-ember hover:underline"
                                     >
                                       {a.name}
                                     </Link>
                                     <Badge tone={STATUS_TONE[a.status] ?? "neutral"}>
                                       {STATUS_LABEL[a.status] ?? titleCase(a.status)}
                                     </Badge>
-                                  </span>
+                                  </div>
                                   <ConflictList conflicts={a.conflicts} />
-                                </span>
+                                </div>
 
-                                {canInvite ? (
-                                  <InviteButton
-                                    serviceId={serviceId}
-                                    teamMemberId={a.teamMemberId}
-                                    name={a.name}
-                                    invited={invites[a.teamMemberId] ?? false}
-                                  />
-                                ) : null}
+                                <div className="flex shrink-0 items-center gap-0.5">
+                                  {canInvite ? (
+                                    <InviteButton
+                                      serviceId={serviceId}
+                                      teamMemberId={a.teamMemberId}
+                                      name={a.name}
+                                      invited={invites[a.teamMemberId] ?? false}
+                                    />
+                                  ) : null}
 
-                                {canEdit ? (
-                                  <span className="flex gap-0.5">
-                                    <button
-                                      type="button"
-                                      aria-label={`Replace ${a.name} on ${slot.positionName}`}
-                                      disabled={pending}
-                                      onClick={() =>
-                                        setPicking(
-                                          picking === `swap:${a.id}` ? null : `swap:${a.id}`,
-                                        )
-                                      }
-                                      className="rounded p-1.5 text-ink-subtle hover:bg-sunken hover:text-ink disabled:opacity-30"
-                                    >
-                                      <Repeat aria-hidden className="size-4" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      aria-label={`Remove ${a.name} from ${slot.positionName}`}
-                                      disabled={pending}
-                                      onClick={() =>
-                                        run(() => removeAssignmentAction(serviceId, a.id))
-                                      }
-                                      className="rounded p-1.5 text-ink-subtle hover:bg-clay-soft hover:text-clay disabled:opacity-30"
-                                    >
-                                      <X aria-hidden className="size-4" />
-                                    </button>
-                                  </span>
-                                ) : null}
+                                  {canEdit ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        aria-label={`Replace ${a.name} on ${slot.positionName}`}
+                                        disabled={pending}
+                                        onClick={() =>
+                                          setPicking(
+                                            picking === `swap:${a.id}` ? null : `swap:${a.id}`,
+                                          )
+                                        }
+                                        className="rounded p-1.5 text-ink-subtle hover:bg-sunken hover:text-ink disabled:opacity-30"
+                                      >
+                                        <Repeat aria-hidden className="size-4" />
+                                      </button>
+                                      <button
+                                        type="button"
+                                        aria-label={`Remove ${a.name} from ${slot.positionName}`}
+                                        disabled={pending}
+                                        onClick={() =>
+                                          run(() => removeAssignmentAction(serviceId, a.id))
+                                        }
+                                        className="rounded p-1.5 text-ink-subtle hover:bg-clay-soft hover:text-clay disabled:opacity-30"
+                                      >
+                                        <X aria-hidden className="size-4" />
+                                      </button>
+                                    </>
+                                  ) : null}
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -432,6 +449,7 @@ export function TeamBuilder({
                           variant="ghost"
                           size="sm"
                           disabled={pending}
+                          className="shrink-0 self-start"
                           onClick={() =>
                             setPicking(
                               picking === slot.positionId ? null : slot.positionId,
