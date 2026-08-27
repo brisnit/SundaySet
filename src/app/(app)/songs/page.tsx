@@ -104,8 +104,8 @@ export default async function SongsPage({ searchParams }: PageProps<"/songs">) {
           description="Try a different search term, or clear the filters to see your whole library."
         />
       ) : (
-      <div className="overflow-hidden rounded-2xl border border-line/70 bg-surface shadow-card">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-2xl border border-line/70 bg-surface shadow-card">
+        <table className="w-full min-w-0 text-sm">
           <caption className="sr-only">
             Song library with rotation health
           </caption>

@@ -50,8 +50,8 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
 
   return (
     <div className="mb-4 grid gap-3">
-      <div className="flex flex-wrap gap-2">
-        <div className="relative min-w-56 flex-1">
+      <div className="grid gap-2 sm:grid-cols-[minmax(14rem,1fr)_repeat(4,auto)]">
+        <div className="relative min-w-0">
           <Search
             aria-hidden
             className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-ink-subtle"
@@ -65,14 +65,15 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
             defaultValue={params.get("q") ?? ""}
             placeholder="Search title, artist or theme"
             onChange={(e) => set("q", e.target.value)}
-            className="h-10 w-full rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-subtle"
+            className="h-10 w-full min-w-0 rounded-lg border border-line-strong bg-surface pr-3 pl-9 text-sm text-ink placeholder:text-ink-subtle"
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-2 sm:contents">
         <label htmlFor="song-type" className="sr-only">Song type</label>
         <Select
           id="song-type"
-          className="w-auto"
+          className="w-full min-w-0 sm:w-auto"
           value={params.get("type") ?? ""}
           onChange={(e) => set("type", e.target.value)}
         >
@@ -85,7 +86,7 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
         <label htmlFor="song-genre" className="sr-only">Genre</label>
         <Select
           id="song-genre"
-          className="w-auto"
+          className="w-full min-w-0 sm:w-auto"
           value={params.get("genre") ?? ""}
           onChange={(e) => set("genre", e.target.value)}
         >
@@ -98,7 +99,7 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
         <label htmlFor="song-familiarity" className="sr-only">Familiarity</label>
         <Select
           id="song-familiarity"
-          className="w-auto"
+          className="w-full min-w-0 sm:w-auto"
           value={params.get("familiarity") ?? ""}
           onChange={(e) => set("familiarity", e.target.value)}
         >
@@ -111,7 +112,7 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
         <label htmlFor="song-sort" className="sr-only">Sort by</label>
         <Select
           id="song-sort"
-          className="w-auto"
+          className="w-full min-w-0 sm:w-auto"
           value={params.get("sort") ?? "title"}
           onChange={(e) => set("sort", e.target.value)}
         >
@@ -119,6 +120,7 @@ export function SongFilters({ total, shown }: { total: number; shown: number }) 
             <option key={v} value={v}>{l}</option>
           ))}
         </Select>
+        </div>
       </div>
 
       <p aria-live="polite" className="text-xs text-ink-subtle">

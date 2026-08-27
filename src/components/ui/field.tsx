@@ -2,8 +2,17 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+/*
+ * `min-w-0` matters more than it looks. A flex item defaults to
+ * `min-width: auto`, so it refuses to shrink below its content — and a native
+ * <select> sizes to its widest OPTION, not its current value. At larger text
+ * sizes one select ("Any familiarity") can exceed a phone's width, push the
+ * document wider than the viewport, and shift the whole app sideways including
+ * the fixed bottom nav. Allowing controls to shrink prevents that at the
+ * primitive rather than per page.
+ */
 const control =
-  "w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle disabled:opacity-60";
+  "w-full min-w-0 max-w-full rounded-lg border border-line-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-subtle disabled:opacity-60";
 
 export function Field({
   label,

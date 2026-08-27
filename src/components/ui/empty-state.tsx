@@ -48,13 +48,13 @@ export function EmptyState({
 
       <h3
         className={cn(
-          "font-display font-semibold text-ink",
+          "font-display font-semibold text-balance break-words text-ink",
           compact ? "text-lg" : "text-xl",
         )}
       >
         {title}
       </h3>
-      <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-ink-muted">
+      <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-pretty break-words text-ink-muted">
         {description}
       </p>
       {children ? (
