@@ -1,3 +1,5 @@
+import type { Genre } from "@/generated/prisma/enums";
+
 import type { ExternalSong, SearchOptions, SongSearchProvider } from "./types";
 
 /**
@@ -67,6 +69,10 @@ export function createMockProvider(
             s.title.toLowerCase().includes(q) || s.artist.toLowerCase().includes(q),
         )
         .slice(0, limit);
+    },
+
+    async browseGenre(genre: Genre, { limit }: SearchOptions) {
+      return catalogue.filter((s) => s.genres?.includes(genre)).slice(0, limit);
     },
   };
 }

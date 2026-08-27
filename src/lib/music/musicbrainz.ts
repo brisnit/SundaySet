@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { Genre } from "@/generated/prisma/enums";
+
 import { SearchError, type ExternalSong, type SearchOptions, type SongSearchProvider } from "./types";
 
 const ENDPOINT = "https://musicbrainz.org/ws/2/work";
@@ -157,14 +159,44 @@ function dedupe(songs: ExternalSong[]): ExternalSong[] {
   return out;
 }
 
+/**
+ * MusicBrainz community tags for each of our genres.
+ *
+ * Several tags per genre because the community does not agree on one — "rnb",
+ * "r&b" and "rhythm and blues" all exist and all have songs under them.
+ */
+const GENRE_TAGS: Record<Genre, string[]> = {
+  WORSHIP: ["worship", "christian"],
+  GOSPEL: ["gospel"],
+  TRADITIONAL: ["hymn", "traditional"],
+  POP: ["pop"],
+  ROCK: ["rock"],
+  ALTERNATIVE: ["alternative rock", "alternative"],
+  INDIE: ["indie rock", "indie"],
+  RNB: ["rnb", "r&b"],
+  SOUL: ["soul"],
+  FUNK: ["funk"],
+  HIP_HOP: ["hip hop", "rap"],
+  COUNTRY: ["country"],
+  FOLK: ["folk"],
+  ACOUSTIC: ["acoustic", "singer-songwriter"],
+  JAZZ: ["jazz"],
+  BLUES: ["blues"],
+  ELECTRONIC: ["electronic", "synthpop"],
+  CLASSICAL: ["classical"],
+  OTHER: [],
+};
+
 export function createMusicBrainzProvider(contact: string): SongSearchProvider {
   const userAgent = `SetMeister/1.0 ( ${contact} )`;
 
-  return {
-    name: "musicbrainz",
-
-    async search(query: string, { limit, signal }: SearchOptions) {
-      const trimmed = query.trim();
+  /** One request, shared by search and by genre browsing. */
+  async function run(
+    luceneQuery: string,
+    rankAgainst: string,
+    { limit, signal }: SearchOptions,
+  ): Promise<ExternalSong[]> {
+      const trimmed = luceneQuery.trim();
       if (!trimmed) return [];
 
       const url = new URL(ENDPOINT);
@@ -174,12 +206,13 @@ export function createMusicBrainzProvider(contact: string): SongSearchProvider {
       // without any writer credit are dropped entirely.
       url.searchParams.set("limit", String(Math.min(100, limit * 3)));
 
-      // MusicBrainz answers 503 fairly readily even inside the documented rate,
-      // and a single dropped connection is not worth surfacing either. Both get
-      // one more go before the user is told anything.
+      // Three attempts, not two. MusicBrainz returns 503 fairly readily even
+      // inside the documented rate, and a genre tile that fails on the first
+      // tap reads as broken rather than busy. The rate limiter already spaces
+      // these out, so a retry costs about a second.
       let res: Response | undefined;
       let networkFailed = false;
-      for (let attempt = 0; attempt < 2; attempt++) {
+      for (let attempt = 0; attempt < 3; attempt++) {
         await rateLimit();
         networkFailed = false;
         try {
@@ -214,7 +247,26 @@ export function createMusicBrainzProvider(contact: string): SongSearchProvider {
         })
         .filter((s): s is { song: ExternalSong; score: number } => s !== null);
 
-      return dedupe(rank(scored, trimmed)).slice(0, limit);
+      return dedupe(rank(scored, rankAgainst)).slice(0, limit);
+  }
+
+  return {
+    name: "musicbrainz",
+
+    search(query, options) {
+      return run(query, query, options);
+    },
+
+    /**
+     * Browsing is the same request with a tag filter instead of free text.
+     * Ranking is left to MusicBrainz here — there is no user phrase to measure
+     * coverage against, so the provider's own relevance is the best signal.
+     */
+    browseGenre(genre, options) {
+      const tags = GENRE_TAGS[genre];
+      if (!tags || tags.length === 0) return Promise.resolve([]);
+      const query = tags.map((t) => `tag:"${t}"`).join(" OR ");
+      return run(query, "", options);
     },
   };
 }

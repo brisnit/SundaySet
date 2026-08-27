@@ -180,11 +180,18 @@ describe("musicbrainz provider", () => {
     expect(results).toHaveLength(1);
   });
 
+  // Three attempts, each spaced by the rate limiter, so this one is slow by
+  // design — that is the cost of not giving up on a service that says "busy".
   it("gives up on a persistent 503 with a message a person can act on", async () => {
-    stubFetch({ status: 503 }, { status: 503 });
-    await expect(provider().search("q", { limit: 5 })).rejects.toBeInstanceOf(SearchError);
-    await expect(provider().search("q", { limit: 5 })).rejects.toThrow(/busy/i);
-  });
+    const { fn } = stubFetch({ status: 503 });
+    const error = await provider()
+      .search("q", { limit: 5 })
+      .then(() => null, (e) => e);
+
+    expect(error).toBeInstanceOf(SearchError);
+    expect((error as Error).message).toMatch(/busy/i);
+    expect(fn).toHaveBeenCalledTimes(3);
+  }, 15000);
 
   it("reports an unreachable service rather than crashing the page", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("network"); }));
@@ -242,5 +249,55 @@ describe("result tightening", () => {
     });
     const results = await provider().search("Purple Rain", { limit: 8 });
     expect(results).toHaveLength(2);
+  });
+});
+
+describe("browsing a genre", () => {
+  it("asks for the genre's tags rather than free text", async () => {
+    const { calls } = stubFetch({ status: 200, body: { works: [work()] } });
+    await provider().browseGenre!("ROCK", { limit: 10 });
+    expect(decodeURIComponent(calls[0])).toContain('tag:"rock"');
+    expect(calls[0]).toContain("/ws/2/work");
+  });
+
+  it("uses every tag a genre is known by, because the community uses all of them", async () => {
+    const { calls } = stubFetch({ status: 200, body: { works: [work()] } });
+    await provider().browseGenre!("RNB", { limit: 10 });
+    // URLSearchParams encodes spaces as "+", so normalise before asserting.
+    const q = decodeURIComponent(calls[0]).replace(/\+/g, " ");
+    expect(q).toContain('tag:"rnb"');
+    expect(q).toContain('tag:"r&b"');
+    expect(q).toContain(" OR ");
+  });
+
+  it("returns nothing for a genre with no tags, without calling out", async () => {
+    const { fn } = stubFetch({ status: 200, body: { works: [work()] } });
+    expect(await provider().browseGenre!("OTHER", { limit: 10 })).toEqual([]);
+    expect(fn).not.toHaveBeenCalled();
+  });
+
+  it("still drops works with no writer credit", async () => {
+    stubFetch({
+      status: 200,
+      body: { works: [work({ relations: [{ type: "performance" }] }), work({ id: "keep" })] },
+    });
+    const results = await provider().browseGenre!("JAZZ", { limit: 10 });
+    expect(results.map((r) => r.externalId)).toEqual(["keep"]);
+  });
+
+  // No user phrase to measure against, so the provider's own ranking stands
+  // and the coverage filter must not silently empty the list.
+  it("keeps the provider's ordering and does not filter everything out", async () => {
+    stubFetch({
+      status: 200,
+      body: {
+        works: [
+          work({ id: "a", title: "Born to Run", score: 100, relations: [{ type: "composer", artist: { name: "Bruce Springsteen" } }] }),
+          work({ id: "b", title: "Badlands", score: 97, relations: [{ type: "composer", artist: { name: "Bruce Springsteen" } }] }),
+        ],
+      },
+    });
+    const results = await provider().browseGenre!("ROCK", { limit: 10 });
+    expect(results.map((r) => r.externalId)).toEqual(["a", "b"]);
   });
 });

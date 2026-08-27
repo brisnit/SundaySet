@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { Genre } from "@/generated/prisma/enums";
 import { env } from "@/lib/env";
 
 import { createMockProvider } from "./mock";
@@ -106,5 +107,38 @@ export async function searchSongs(
   } catch (e) {
     if (e instanceof SearchError) return { ok: false, message: e.message };
     return { ok: false, message: "Song search is unavailable right now." };
+  }
+}
+
+/**
+ * Well-known songs in one genre.
+ *
+ * Same cache, same rate limit and the same promise never to throw: a genre
+ * tile that cannot load says so and leaves the rest of the page working.
+ */
+export async function browseGenre(
+  genre: Genre,
+  limit = 24,
+): Promise<SearchOutcome> {
+  const search = getSongSearch();
+  if (!search.browseGenre) {
+    return { ok: false, message: "Browsing by genre is not available right now." };
+  }
+
+  const key = `${search.name}:genre:${limit}:${genre}`;
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL_MS) return { ok: true, results: hit.results };
+
+  try {
+    const results = await search.browseGenre(genre, { limit });
+    if (cache.size >= MAX_ENTRIES) {
+      const oldest = cache.keys().next().value;
+      if (oldest !== undefined) cache.delete(oldest);
+    }
+    cache.set(key, { at: Date.now(), results });
+    return { ok: true, results };
+  } catch (e) {
+    if (e instanceof SearchError) return { ok: false, message: e.message };
+    return { ok: false, message: "Browsing by genre is unavailable right now." };
   }
 }

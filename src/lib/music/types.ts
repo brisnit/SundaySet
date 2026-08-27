@@ -45,6 +45,13 @@ export type SearchOptions = {
 export type SongSearchProvider = {
   readonly name: string;
   search(query: string, options: SearchOptions): Promise<ExternalSong[]>;
+  /**
+   * Well-known songs in a genre, for browsing rather than searching.
+   *
+   * Optional because not every provider can do it. A provider that cannot
+   * simply omits it and the genre tiles fall back to search.
+   */
+  browseGenre?(genre: Genre, options: SearchOptions): Promise<ExternalSong[]>;
 };
 
 /** Thrown when a provider fails in a way worth telling the user about. */

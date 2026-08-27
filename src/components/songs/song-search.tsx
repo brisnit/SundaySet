@@ -119,7 +119,7 @@ export function SongSearch({ usingDemoCatalogue }: { usingDemoCatalogue: boolean
   );
 }
 
-function ResultRow({ row }: { row: SearchResultRow }) {
+export function ResultRow({ row }: { row: SearchResultRow }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);

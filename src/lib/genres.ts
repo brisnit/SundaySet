@@ -42,3 +42,16 @@ export function genreLabel(value: Genre): string {
 export function genreLabels(values: Genre[]): string[] {
   return GENRES.filter((g) => values.includes(g.value)).map((g) => g.label);
 }
+
+/**
+ * The genres offered on Home.
+ *
+ * A curated dozen rather than all nineteen: the grid is meant to be scanned in
+ * one look, and the long tail is reachable by searching. Worship leads because
+ * it is what most of these workspaces are for, then the broad popular genres.
+ */
+export const HOME_GENRES: ReadonlyArray<{ genre: Genre; label: string }> = [
+  "WORSHIP", "GOSPEL", "POP", "ROCK",
+  "RNB", "SOUL", "HIP_HOP", "COUNTRY",
+  "JAZZ", "FOLK", "ELECTRONIC", "CLASSICAL",
+].map((g) => ({ genre: g as Genre, label: genreLabel(g as Genre) }));
