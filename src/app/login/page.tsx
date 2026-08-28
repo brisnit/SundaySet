@@ -29,8 +29,8 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
           <Image
             src="/brand/setmeister-logo.png"
             alt="SetMeister"
-            width={130}
-            height={31}
+            width={316}
+            height={53}
             priority
             unoptimized
             className="brand-logo mx-auto h-9 w-auto"
