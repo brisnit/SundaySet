@@ -66,8 +66,19 @@ export default async function BrowseGenrePage({
         }
       />
 
-      <div className="mb-5 overflow-hidden rounded-xl shadow-card">
-        <CategoryArt genre={match.value} className="aspect-[200/58] w-full" />
+      <div className="relative mb-5 aspect-[3/1] overflow-hidden rounded-2xl shadow-card">
+        <CategoryArt
+          genre={match.value}
+          sizes="(min-width: 768px) 768px, 100vw"
+          priority
+        />
+        <span
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 to-transparent"
+        />
+        <span className="absolute inset-x-0 bottom-0 px-4 pb-3 font-display text-2xl font-bold text-white">
+          {genreLabel(match.value)}
+        </span>
       </div>
 
       {!outcome.ok ? (

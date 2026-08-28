@@ -46,9 +46,10 @@ export function genreLabels(values: Genre[]): string[] {
 /**
  * The genres offered on Home.
  *
- * A curated dozen rather than all nineteen: the grid is meant to be scanned in
- * one look, and the long tail is reachable by searching. Worship leads because
- * it is what most of these workspaces are for, then the broad popular genres.
+ * A curated dozen rather than all nineteen — these are the ones we have
+ * photography for, and the long tail is reachable by searching. Worship leads
+ * because it is what most of these workspaces are for, then the broad popular
+ * genres.
  */
 export const HOME_GENRES: ReadonlyArray<{ genre: Genre; label: string }> = [
   "WORSHIP", "GOSPEL", "POP", "ROCK",
